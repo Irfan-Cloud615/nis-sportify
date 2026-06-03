@@ -1,0 +1,4106 @@
+
+import ddf.minim.*;
+import processing.video.*;
+
+Minim minim;
+AudioPlayer[] players = new AudioPlayer[45];
+AudioPlayer currentPlayer;
+Movie vidioMomen, vidioAboutYou, vidioSempurna, vidioMonolog, vidioMasaIni;
+
+PImage song1, song2, song3, song4, song5, song6, song7, song8, song9, song10, profileImg;
+PImage albumImg1, albumImg2, albumImg3, albumImg4, albumImg5, albumImg6, albumImg7;
+PImage profileTemplateImg;
+String[] albumNames = {"about you💕", "mood shif😵💫", "playlist nica🦋", "jawa pride🤟🏻", "sad nicaa🙅🏻♀️", "lovely shif🤯", "selundupan💕"};
+PImage[] albumCovers;
+PImage bingkaiImg;
+int selectedAlbumIndex = 0;
+PFont titleFont, mainFont, bubblyFont, retroFont;
+
+color pinkColor = #FFC0CB;
+color creamColor = #FFFDD0;
+color accentColor = #FF69B4;
+color textColor = #4A4A4A;
+color subTextColor = #8E8E8E;
+color cardColor = color(255, 255, 255, 150);
+color sidebarColor = color(255, 192, 203, 180);
+
+int currentPage = -1; // -1 for splash screen, 0 for Home
+int selectedSong = 0;
+int splashTimer = 0;
+int lastClickTime = 0;
+float uiOffset = 0; // For moving elements when lyrics appear
+float lyricsScroll = 0; // Current scroll position for lyrics
+float targetLyricsScroll = 0; // Target scroll position for lyrics
+
+// Video popup states
+boolean showVideoSempurna = false;
+boolean showSempurnaControls = true;
+boolean isPlayingSempurna = false;
+boolean showVideoAboutYou = false;
+boolean isPlayingAboutYou = false;
+boolean showVideoMonolog = false;
+boolean isPlayingMonolog = false;
+boolean isPlayingMasaIni = false;
+int activeLyricLine = -1;
+int activeFilter = 0; // 0: Playlists, 1: By you
+boolean showVideoMomen = false; // For toggling the moment video
+boolean showMomenControls = false; // For toggling the moment video playback overlay
+boolean isPlayingMomen = false; // For keeping track of play state
+boolean autoNextTriggered = false; // Flag to prevent repeated auto-next calls
+// playContext: 0=Home(semua lagu), 1=Playlist yg Disukai(0-4), 2=Lagu Sering Diputar(0-44), 3=Album Nisa(per album)
+int playContext = 0;
+boolean isRepeat = false;   // Mode repeat
+boolean isShuffle = false;  // Mode shuffle
+boolean[] isLiked = new boolean[45]; // Status like per lagu
+boolean isDraggingSeek = false; // Sedang drag progress bar
+boolean isDraggingVol = false;  // Sedang drag volume
+float volumeValue = 0.7;        // Nilai volume (0.0 - 1.0)
+float smoothProgress = 0;       // Untuk pergerakan progress bar yang halus
+
+String searchQuery = "";
+boolean searchFocused = false;
+ArrayList<Integer> searchResultIndices = new ArrayList<Integer>();
+
+String[] songsList;
+String[] artistsList;
+PImage[] imgsList;
+String[][] allLyrics = new String[45][];
+float homeScrollY = 0;
+float targetHomeScrollY = 0;
+float albumScrollY = 0;
+float targetAlbumScrollY = 0;
+float libScrollY = 0;
+float targetLibScrollY = 0;
+float catScrollY = 0;
+float targetCatScrollY = 0;
+float albumOpenAnim = 0;
+
+color musicaAccent = #FF007F;
+PImage splashImgNew;
+PFont eleganceFont;
+
+
+void setup() {
+  size(1200, 800);
+  surface.setResizable(true);
+  smooth();
+
+  // Load Images from folder modul 5 (parent)
+  song1 = loadImage("../bersenja gurau.jpg");
+  song2 = loadImage("../diary depresi.jpg");
+  song3 = loadImage("../sekuat hatimu.jpg");
+  song4 = loadImage("../sesi potret.jpg");
+  song5 = loadImage("../ada titik titik diujung doa.jpg");
+  song6 = loadImage("../everything u are.jpg");
+  song7 = loadImage("../bergema sampai selamanya.jpg");
+  song8 = loadImage("../dirimu yang dulu.jpg");
+  song9 = loadImage("../bernafas tanpamu.jpg");
+  song10 = loadImage("../rumah kerumah.jpg");
+
+  albumImg1 = loadImage("../about you.jpg");
+  albumImg2 = loadImage("../mood shif.jpg");
+  albumImg3 = loadImage("../playlist nicaa.jpg");
+  albumImg4 = loadImage("../jawa pride.jpg");
+  albumImg5 = loadImage("../sad nicaa.jpg");
+  albumImg6 = loadImage("../lovely shif.jpg");
+  albumImg7 = loadImage("../selundupan.jpg"); // Cover for selundupan album
+
+  albumCovers = new PImage[]{albumImg1, albumImg2, albumImg3, albumImg4, albumImg5, albumImg6, albumImg7};
+
+  // Using song1 as the default profile image from the folder
+  profileImg = loadImage("../profil dibuka.jpg");
+  profileTemplateImg = loadImage("../profil dibuka.jpg");
+
+  titleFont = createFont("Arial Bold", 24);
+  mainFont = createFont("Arial", 14);
+  bubblyFont = createFont("Arial Rounded MT Bold", 28);
+  retroFont = createFont("Cooper Black", 32);
+  eleganceFont = createFont("Cooper Black", 120); // Puffy Retro font for the Funky design
+
+  splashImgNew = loadImage("splash_new.png");
+
+  // Audio Setup
+  minim = new Minim(this);
+  players[0] = minim.loadFile("../BERSENJA GURAU - RAIM LAODE ( Ai VIDEO LIRIK ) (1).mp3");
+  players[1] = minim.loadFile("../Last Child - Diary Depresiku  Official Lyric Video.mp3");
+  players[2] = minim.loadFile("../Last Child - Sekuat Hatimu (Official Lyric Video)  As Strong As Your Heart (Mother).mp3");
+  players[3] = minim.loadFile("../enau feat. Ari Lesmana - Sesi Potret (Official Music Video).mp3");
+  players[4] = minim.loadFile("../Ada titik-titik di ujung doa - Sal Priadi  Lirik Lagu.mp3");
+  players[5] = minim.loadFile("../Hindia - everything u are.mp3");
+  players[6] = minim.loadFile("../Nadhif Basalamah - bergema sampai selamanya (Official Lyric Video).mp3");
+  players[7] = minim.loadFile("../ANGGIS DEVAKI - DIRIMU YANG DULU (LYRIC VIDEO) LIRIK LAGU TRENDING TERBARU.mp3");
+  players[8] = minim.loadFile("../Last Child - Bernafas Tanpamu (Official Lyric Video).mp3");
+  players[9] = minim.loadFile("../Rumah Ke Rumah - Hindia (Lirik).mp3");
+
+  // Album About You (index 10-14)
+  players[10] = minim.loadFile("../The 1975 - About You (Official).mp3");
+  players[11] = minim.loadFile("../Jaz - Bersamamu (Official Lyric Video).mp3");
+  players[12] = minim.loadFile("../Pamungkas - Monolog (Lyrics Video).mp3");
+  players[13] = minim.loadFile("../MASA INI, NANTI, DAN MASA INDAH LAINNNYA.mp3");
+  players[14] = minim.loadFile("../Andra And The Backbone - Sempurna (Official Music Video).mp3");
+
+  // Album Mood Shif (index 15-19)
+  players[15] = minim.loadFile("../DJ KICAU KICAU KICAU MANIA SLOW VIRAL TIKTOK FULL SONG MAMAN FVNDY 2026.mp3");
+  players[16] = minim.loadFile("../Melinda - Cinta Satu Malam (Official Music Video NAGASWARA) #music.mp3");
+  players[17] = minim.loadFile("../Lissa - Keong Racun [Official Music Video].mp3");
+  players[18] = minim.loadFile("../Zaskia Gotik - Bang Jono Remix Version (Official Music Video NAGASWARA) #music.mp3");
+  players[19] = minim.loadFile("../Jarang Pulang.mp3");
+
+  // Album Playlist Nica (index 20-24)
+  players[20] = minim.loadFile("../Raim Laode - IQRO' (official Music Video).mp3");
+  players[21] = minim.loadFile("../Perunggu - Ini Abadi (Video Lirik).mp3");
+  players[22] = minim.loadFile("../Hindia - Rasakan Nikmatnya Hidup (Official Lyric Video).mp3");
+  players[23] = minim.loadFile("../TULUS - Jatuh Suka (Official Lyric Video).mp3");
+  players[24] = minim.loadFile("../Nadin Amizah - Beranjak Dewasa (Official Lyric Video).mp3");
+
+  // Album Jawa Pride (index 25-29)
+  players[25] = minim.loadFile("../NDX A K A Kelingan Mantan.mp3");
+  players[26] = minim.loadFile("../NDX AKA - Tresno Tekan Mati New Version ( Official Lyric Video ).mp3");
+  players[27] = minim.loadFile("../Denny Caknan Feat Bella Bonita - SINARENGAN ( Official Video ).mp3");
+  players[28] = minim.loadFile("../DENOK - Cindi Cintya feat Sadewok (Official Music Video).mp3");
+  players[29] = minim.loadFile("../NDX AKA - Nemen HipHop Dangdut Version ( Official Lyric Video ).mp3");
+
+  // Album Sad Nicaa (index 30-34)
+  players[30] = minim.loadFile("../Bernadya - Kata Mereka Ini Berlebihan (Official Video).mp3");
+  players[31] = minim.loadFile("../Hindia - Evakuasi (Official Music Video).mp3");
+  players[32] = minim.loadFile("../Nadin Amizah - Bertaut (Official Music Video).mp3");
+  players[33] = minim.loadFile("../NATASYA SABELLA - MENERIMA LUKA ( OFFICIAL LYRICS VIDEO ).mp3");
+  players[34] = minim.loadFile("../KAHITNA - Titik Nadir (Official Lyric Video).mp3");
+
+  // Album Lovely Shif (index 35-39)
+  players[35] = minim.loadFile("../Di Ambang Karam.mp3");
+  players[36] = minim.loadFile("../Tuhan Sebut Sia-Sia.mp3");
+  players[37] = minim.loadFile("../Sal Priadi - Gala bunga matahari (Official Music Video).mp3");
+  players[38] = minim.loadFile("../Yura Yunita - Tanda (Official Lyric Video).mp3");
+  players[39] = minim.loadFile("../Bernadya - Lama-Lama (Official Video).mp3");
+
+  // Album Selundupan (index 40-44) - Real Songs
+  players[40] = minim.loadFile("../Taylor Swift - The Archer (Lyric Video).mp3");
+  players[41] = minim.loadFile("../Rossa - Tak Sanggup Lagi Official Music Video.mp3");
+  players[42] = minim.loadFile("../Noel Gallaghers High Flying Birds - If I Had A Gun.mp3");
+  players[43] = minim.loadFile("../Taylor Swift - All Too Well (10 Minute Version) (Taylor's Version) (From The Vault) (Lyric Video).mp3");
+  players[44] = minim.loadFile("../Backstreet Boys - Shape of My Heart (Lyrics).mp3");
+
+  currentPlayer = players[0];
+
+  songsList = new String[]{"Bersenja Gurau", "Diary Depresi", "Sekuat Hatimu", "Sesi Potret", "Ada Titik Titik", "Everything U Are", "Bergema Sampai", "Dirimu Yang Dulu", "Bernafas Tanpamu", "Rumah Ke Rumah", "about you", "bersamamu", "monolog", "masa ini nanti dan masa indah lainnya", "sempurna", "dj kicau mania", "cinta satu malam", "keong racun", "bang jono", "jarang pulang", "iqro'", "ini abadi", "rasakan nikmatnya hidup", "jatuh suka", "beranjak dewasa", "kelingan mantan", "tresno tekan mati", "sinarengan", "denok", "nemen", "kata mereka ini berlebihan", "evaluasi", "bertaut", "menerima luka", "titik nadir", "diambang karam", "tuhan sebut sia sia", "gala bunga matahari", "tanda", "lama lama", "The Archer", "Tak Sanggup Lagi", "If I Had A Gun", "All Too Well", "Shape Of My Heart"};
+
+  artistsList = new String[]{"Raim Laode", "Last Child", "Last Child", "enau feat. Ari Lesmana", "Sal Priadi", "Hindia", "Nadhif Basalamah", "Anggis Devaki", "Last Child", "Hindia", "The 1975", "Jaz", "Pamungkas", "Nisa", "Andra and the Backbone", "DJ Maman Fvndy", "Melinda", "Lissa", "Zaskia Gotik", "Zaskia Gotik", "Raim Laode", "Perunggu", "Hindia", "Tulus", "Nadin Amizah", "NDX AKA", "NDX AKA", "Denny Caknan", "Cindi Cintya", "NDX AKA", "Bernadya", "Hindia", "Nadin Amizah", "Natasya Sabella", "Kahitna", "Hindia", "Bernadya", "Sal Priadi", "Yura Yunita", "Bernadya", "Taylor Swift", "Rossa", "Noel Gallagher", "Taylor Swift", "Sting"};
+
+  imgsList = new PImage[45];
+  for (int i = 0; i < 45; i++) imgsList[i] = song1;
+  imgsList[0] = song1;
+  imgsList[1] = song2;
+  imgsList[2] = song3;
+  imgsList[3] = song4;
+  imgsList[4] = song5;
+  imgsList[5] = song6;
+  imgsList[6] = song7;
+  imgsList[7] = song8;
+  imgsList[8] = song9;
+  imgsList[9] = song10;
+
+  // Foto profil untuk lagu-lagu di album about you (index 10-14)
+  imgsList[10] = loadImage("../about youu.jpg");
+  imgsList[11] = loadImage("../bersamamu.jpg");
+  imgsList[12] = loadImage("../monolog.jpg");
+  imgsList[13] = loadImage("../masa ini nanti dan masa indah lainnya.jpg");
+  imgsList[14] = loadImage("../sempurna.jpg");
+
+  // Foto profil untuk lagu-lagu di album mood shif (index 15-19)
+  imgsList[15] = loadImage("../dj kicau mania.jpg");
+  imgsList[16] = loadImage("../cinta satu malam.jpg");
+  imgsList[17] = loadImage("../keong racun.jpg");
+  imgsList[18] = loadImage("../bang jono.jpg");
+  imgsList[19] = loadImage("../jarang pulang.jpg");
+
+  // Foto profil untuk lagu-lagu di album playlist nicaa (index 20-24)
+  imgsList[20] = loadImage("../iqro'.jpg");
+  imgsList[21] = loadImage("../ini abadi.jpg");
+  imgsList[22] = loadImage("../rasakan nikmatnya hidup.jpg");
+  imgsList[23] = loadImage("../jatuh suka.jpg");
+  imgsList[24] = loadImage("../beranjak dewasa.jpg");
+
+  // Foto profil untuk lagu-lagu di album jawa pride (index 25-29)
+  imgsList[25] = loadImage("../kelingan mantan.jpg");
+  imgsList[26] = loadImage("../tresno tekan mati.jpg");
+  imgsList[27] = loadImage("../sinarengan.jpg");
+  imgsList[28] = loadImage("../denok.jpg");
+  imgsList[29] = loadImage("../nemen.jpg");
+
+  // Foto profil untuk lagu-lagu di album sad nicaa (index 30-34)
+  imgsList[30] = loadImage("../kata mereka ini berlebihan.jpg");
+  imgsList[31] = loadImage("../evaluasi.jpg");
+  imgsList[32] = loadImage("../bertaut.jpg");
+  imgsList[33] = loadImage("../menerima luka.jpg");
+  imgsList[34] = loadImage("../titiknadir.jpg");
+
+  // Foto profil untuk lagu-lagu di album lovely shif (index 35-39)
+  imgsList[35] = loadImage("../diambang karam.jpg");
+  imgsList[36] = loadImage("../tuhan sebut sia sia.jpg");
+  imgsList[37] = loadImage("../gala bunga matahari.jpg");
+  imgsList[38] = loadImage("../tanda.jpg");
+  imgsList[39] = loadImage("../lama lama.jpg");
+
+  // Foto profil untuk lagu-lagu di album selundupan (index 40-44)
+  imgsList[40] = loadImage("../the archer.jpg");
+  imgsList[41] = loadImage("../tak sanggp lagi.jpg");
+  imgsList[42] = loadImage("../if i had a gun.jpg");
+  imgsList[43] = loadImage("../all too well.jpg");
+  imgsList[44] = loadImage("../shape of my heart.jpg");
+
+  // Setup Lyrics
+  allLyrics[0] = new String[]{"0", "Banyak yang salah mengira...", "5000", "Senja bukan tentang kopi", "10000", "Lagu indie dan cerita", "15000", "Ku kasi tahu kepadamu", "20000", "Senja adalah hadiah", "25000", "Pejalan kaki menjemput magribnya", "30000", "Selalu ada pelangi", "35000", "Pada setiap mendungnya", "40000", "Setiap derita...", "45000", "Ku kan ada slalu untukmu", "50000", "Temani setiap derita"};
+  allLyrics[1] = new String[]{"0", "Ku ingat saat Ayah pergi", "5000", "Dan kami mulai kelaparan", "10000", "Hal yang biasa buat aku", "15000", "Hidup di jalanan...", "20000", "Di saat ku belum mengerti", "25000", "Arti sebuah perceraian", "30000", "Yang hancurkan semua", "35000", "Hal indah yang dulu kumiliki", "40000", "Wajar bila saat ini", "45000", "Ku iri pada kalian"};
+  allLyrics[2] = new String[]{"0", "Tetaplah sekuat hatimu", "5000", "Walau badai menerjang", "10000", "Aku akan selalu ada", "15000", "Di sampingmu sayang", "20000", "Menjagamu selamanya..."};
+  allLyrics[3] = new String[]{"0", "Sesi potret kita", "4000", "Di pagi hari itu", "8000", "Masih tersimpan rapi", "12000", "Di dalam memoriku", "16000", "Senyumanmu yang manis..."};
+  allLyrics[4] = new String[]{"0", "Ada titik-titik...", "5000", "Di ujung doa saya", "10000", "Berharap kau bahagia", "15000", "Di sana selamanya", "20000", "Tuhan kan menjagamu..."};
+  allLyrics[5] = new String[]{"0", "Everything you are", "5000", "Is all I ever wanted", "10000", "You are the light", "15000", "In my darkest day", "20000", "I'll love you forever..."};
+  allLyrics[6] = new String[]{"0", "Bergema selamanya", "5000", "Melodi cinta kita", "10000", "Takkan pernah pudar", "15000", "Ditelan waktu...", "20000", "Kau segalanya bagiku..."};
+  allLyrics[7] = new String[]{"0", "Dirimu yang dulu", "5000", "Sangatlah berarti", "10000", "Kini kau pergi", "15000", "Tinggalkan perih...", "20000", "Hati ini terluka..."};
+  allLyrics[8] = new String[]{"0", "Bernafas tanpamu", "5000", "Sungguh menyesakkan", "10000", "Seperti ikan yang", "15000", "Terdampar di darat", "20000", "Kehilangan arah hidup..."};
+  allLyrics[9] = new String[]{"0", "Dari rumah ke rumah", "5000", "Kucari ketenangan", "10000", "Namun hanya dirimu", "15000", "Yang kurindukan...", "20000", "Pulanglah kepadaku..."};
+
+  allLyrics[10] = new String[]{"0", "I know a place", "8000", "It's somewhere I go when I need to remember your face", "16000", "We get married in our heads", "24000", "Something to do while we try to recall how we met", "32000", "Do you think I have forgotten?", "40000", "Do you think I have forgotten?", "48000", "Do you think I have forgotten", "56000", "About you?"};
+  allLyrics[11] = new String[]{"0", "Bersamamu...", "5000", "Kita akan lewati segalanya", "10000", "Bersamamu...", "15000", "Kita kan temui bahagia", "20000", "Tak perlu ragu", "25000", "Genggam erat tanganku", "30000", "Melangkah bersama", "35000", "Menuju masa depan yang cerah"};
+  allLyrics[12] = new String[]{"0", "Gelap di dalam tanya", "5000", "Menyembunyikan rahasianya", "10000", "Letih kehabisan daya", "15000", "Menghadapi dunia", "20000", "Namun kau datang membawa", "25000", "Setitik cahaya", "30000", "Menerangi jalanku", "35000", "Dalam monolog ini"};
+  allLyrics[13] = new String[]{"0", "Masa ini...", "5000", "Nanti, dan masa indah lainnya", "10000", "Akan kita kenang", "15000", "Sebagai cerita", "20000", "Tentang tawa dan air mata", "25000", "Yang pernah kita lewati", "30000", "Bersama di bawah langit", "35000", "Yang sama"};
+  allLyrics[14] = new String[]{"0", "Kau begitu sempurna", "6000", "Dimataku kau begitu indah", "12000", "Kau membuat diriku", "18000", "Akan slalu memujamu", "24000", "Di setiap langkahku", "30000", "Ku kan slalu memikirkan dirimu", "36000", "Tak bisa kubayangkan", "42000", "Hidupku tanpa cintamu"};
+
+  allLyrics[15] = new String[]{"0", "DJ Kicau Mania...", "5000", "Viral Tiktok 2026", "10000", "Tarik sis semongko...", "15000", "Asikkk...", "20000", "Goyang terus...", "25000", "Jangan kasih kendor"};
+  allLyrics[16] = new String[]{"0", "Cinta satu malam", "5000", "Oh indahnya...", "10000", "Cinta satu malam", "15000", "Buatku melayang...", "20000", "Walau satu malam", "25000", "Akan selalu ku kenang", "30000", "Dalam hidupku..."};
+  allLyrics[17] = new String[]{"0", "Dasar kau keong racun", "5000", "Baru kenal eh ngajak tidur", "10000", "Ngomong nggak sopan santun", "15000", "Kau anggap aku ayam kampung", "20000", "Kau rayu diriku", "25000", "Kau goda diriku", "30000", "Dasar kau... keong racun"};
+  allLyrics[18] = new String[]{"0", "Bang Jono...", "5000", "Kenapa kau tak pulang-pulang", "10000", "Istrimu nunggu di rumah", "15000", "Sambil marah-marah...", "20000", "Janji mau pulang", "25000", "Malah asik keluyuran", "30000", "Oh Bang Jono..."};
+  allLyrics[19] = new String[]{"0", "Suami jarang pulang", "5000", "Kerjanya malam-malam", "10000", "Bikin hati meriang", "15000", "Gelisah tak karuan", "20000", "Kemana dirimu", "25000", "Ku rindu kasih sayangmu"};
+
+  allLyrics[20] = new String[]{"0", "Iqro...", "5000", "Bacalah dengan nama Tuhanmu", "10000", "Yang menciptakan...", "15000", "Menciptakan manusia", "20000", "Dari segumpal darah"};
+  allLyrics[21] = new String[]{"0", "Ini abadi...", "5000", "Takkan terganti", "10000", "Semua yang terjadi", "15000", "Pasti ada arti", "20000", "Kita lewati bersama"};
+  allLyrics[22] = new String[]{"0", "Rasakan nikmatnya hidup...", "5000", "Jangan kau sesali", "10000", "Semua yang telah pergi", "15000", "Syukuri hari ini", "20000", "Esok kan lebih baik"};
+  allLyrics[23] = new String[]{"0", "Ku mulai jatuh suka...", "5000", "Pada dirimu", "10000", "Senyum manismu", "15000", "Buatku terpaku", "20000", "Tak bisa berpaling"};
+  allLyrics[24] = new String[]{"0", "Kita beranjak dewasa...", "5000", "Banyak hal yang berubah", "10000", "Namun kenangan kita", "15000", "Akan selalu ada", "20000", "Di dalam hati"};
+
+  allLyrics[25] = new String[]{"0", "Kelingan mantan...", "5000", "Sing tau nglarani", "10000", "Ninggalke kenangan", "15000", "Sing ra iso lali", "20000", "Ati iki perih..."};
+  allLyrics[26] = new String[]{"0", "Tresno tekan mati...", "5000", "Kowe seng tak sayangi", "10000", "Ojo nganti ngelarani", "15000", "Janji suci iki", "20000", "Tekan mbesok mati..."};
+  allLyrics[27] = new String[]{"0", "Sinarengan...", "5000", "Mlaku bareng kowe", "10000", "Ngelewati dino", "15000", "Seng kebak rintangan", "20000", "Nanging tetep seneng..."};
+  allLyrics[28] = new String[]{"0", "Denok...", "5000", "Kowe pancen ayu", "10000", "Nggawe ati rindu", "15000", "Pengen sanding sliramu", "20000", "Dadi bojoku..."};
+  allLyrics[29] = new String[]{"0", "Nemen...", "5000", "Pancen nemen caramu", "10000", "Ngelarani atiku", "15000", "Wes tak kekke kabeh", "20000", "Nanging mbok sia-siake..."};
+
+  allLyrics[30] = new String[]{"0", "Kata mereka ini berlebihan", "5000", "Mungkin memang benar...", "10000", "Aku terlalu dalam...", "15000", "Mencintaimu...", "20000", "Tapi biarlah..."};
+  allLyrics[31] = new String[]{"0", "Evakuasi...", "5000", "Dari kerumunan ini", "10000", "Menuju tempat sepi", "15000", "Dimana aku bisa...", "20000", "Bernafas lega"};
+  allLyrics[32] = new String[]{"0", "Bun, hidup berjalan terlalu jauh", "5000", "Melihat kau tak kunjung dewasa", "10000", "Ibu, ibu, engkaulah ratu hatiku", "15000", "Tempatku bercerita...", "20000", "Tentang segalanya"};
+  allLyrics[33] = new String[]{"0", "Menerima luka...", "5000", "Yang kau berikan", "10000", "Ikhlas kulepaskan", "15000", "Semua kenangan kita", "20000", "Walau terasa perih"};
+  allLyrics[34] = new String[]{"0", "Di titik nadir...", "5000", "Aku terdiam", "10000", "Mencari arah", "15000", "Yang hilang...", "20000", "Mungkinkah ada harapan?"};
+
+  allLyrics[35] = new String[]{"0", "Di ambang karam...", "5000", "Hatiku hancur...", "10000", "Tenggelam dalam sepi", "15000", "Mencari jalan pulang", "20000", "Di tengah samudera duka"};
+  allLyrics[36] = new String[]{"0", "Tuhan sebut sia-sia...", "5000", "Perjuangan ini", "10000", "Namun ku tetap bertahan", "15000", "Mencari makna diri", "20000", "Di balik lelah hati"};
+  allLyrics[37] = new String[]{"0", "Mekarlah bunga matahari...", "5000", "Di taman hatimu", "10000", "Membawa kehangatan", "15000", "Menghapus kesedihan", "20000", "Indah berseri-seri"};
+  allLyrics[38] = new String[]{"0", "Tanda-tanda itu...", "5000", "Sudah mulai terlihat", "10000", "Kau akan pergi", "15000", "Meninggalkan diriku", "20000", "Dalam penantian panjang"};
+  allLyrics[39] = new String[]{"0", "Lama-lama ku bosan...", "5000", "Menunggumu disini", "10000", "Tanpa ada kepastian", "15000", "Lebih baik kusudahi", "20000", "Cerita cinta ini"};
+
+  allLyrics[40] = new String[]{"0", "I am an archer...", "5000", "And I am the pray", "10000", "Who could ever leave me, darling?", "15000", "But who could stay?"};
+  allLyrics[41] = new String[]{"0", "Tak sanggup lagi...", "5000", "Menerima semua kenyataan", "10000", "Tentang dirimu", "15000", "Yang tak pernah jujur"};
+  allLyrics[42] = new String[]{"0", "If I had a gun...", "5000", "I'd shoot a hole into the sun", "10000", "Love would burn away", "15000", "The darkness of my days"};
+  allLyrics[43] = new String[]{"0", "I remember us...", "5000", "In Central Park in fall", "10000", "How you turned to me and said", "15000", "This is it, after all"};
+  allLyrics[44] = new String[]{"0", "He was just a boy...", "5000", "Who had the mark upon the wall", "10000", "He was just a shape...", "15000", "Of my heart"};
+
+  vidioMomen = new Movie(this, "vidio momeries.mp4");
+  vidioAboutYou = new Movie(this, "About You - The 1975.mp4");
+  vidioSempurna = new Movie(this, "Andra And The Backbone - Sempurna (Official Music Video).mp4");
+  vidioMonolog = new Movie(this, "vidio2.mp4"); // Keep as vidio2.mp4 to avoid space issues found earlier
+  vidioMasaIni = new Movie(this, "masa ininanti dan lainnya.mp4");
+  bingkaiImg = loadImage("bingkai.png");
+}
+
+void playSong(int index) {
+  if (index >= 0 && index < players.length) {
+    if (currentPlayer != null) currentPlayer.pause();
+    currentPlayer = players[index];
+    if (currentPlayer != null) {
+      currentPlayer.rewind();
+      currentPlayer.play();
+    }
+    selectedSong = index;
+    smoothProgress = 0; // Reset progress bar untuk lagu baru
+    autoNextTriggered = false; // Reset flag setiap kali lagu baru dimulai
+
+    // Handle background video for "About You"
+    if (vidioAboutYou != null) {
+      if (index == 10) {
+        vidioAboutYou.volume(0); // Mute the video
+        vidioAboutYou.loop();
+        vidioAboutYou.play();
+        showVideoAboutYou = false; // Disabled popup
+        isPlayingAboutYou = true;
+      } else {
+        vidioAboutYou.stop();
+        showVideoAboutYou = false;
+        isPlayingAboutYou = false;
+      }
+    }
+
+    // Handle background video for "Sempurna"
+    if (vidioSempurna != null) {
+      if (index == 14) {
+        vidioSempurna.volume(0); // Mute the video
+        vidioSempurna.loop();
+        vidioSempurna.play();
+        showVideoSempurna = false; // Disabled popup
+        isPlayingSempurna = true;
+      } else {
+        vidioSempurna.stop();
+        showVideoSempurna = false;
+        isPlayingSempurna = false;
+      }
+    }
+
+    // Handle background video for "Monolog"
+    if (vidioMonolog != null) {
+      if (index == 12) {
+        vidioMonolog.volume(0); // Mute the video
+        vidioMonolog.loop();
+        vidioMonolog.play();
+        showVideoMonolog = false; // Background mode, no popup
+        isPlayingMonolog = true;
+      } else {
+        vidioMonolog.stop();
+        showVideoMonolog = false;
+        isPlayingMonolog = false;
+      }
+    }
+
+    // Handle background video for "Masa Ini Nanti"
+    if (vidioMasaIni != null) {
+      if (index == 13) {
+        vidioMasaIni.volume(0); // Mute the video
+        vidioMasaIni.loop();
+        vidioMasaIni.play();
+        isPlayingMasaIni = true;
+      } else {
+        vidioMasaIni.stop();
+        isPlayingMasaIni = false;
+      }
+    }
+  }
+}
+
+// Panggil ini setiap kali user mulai play dari suatu menu
+void setPlayContext(int ctx) {
+  playContext = ctx;
+}
+
+void nextSong() {
+  // Gunakan playContext (dari mana lagu dimulai), bukan currentPage yang berubah
+  if (playContext == 1) { // Playlist yang Disukai: lagu 0-4
+    selectedSong++;
+    if (selectedSong > 4) selectedSong = 0;
+  } else if (playContext == 2) { // Lagu Sering Diputar: semua 45 lagu
+    selectedSong++;
+    if (selectedSong > 44) selectedSong = 0;
+  } else if (playContext == 3) { // Album Nisa: 5 lagu per album
+    int start = 10 + selectedAlbumIndex * 5;
+    int end = start + 4;
+    selectedSong++;
+    if (selectedSong > end) selectedSong = start;
+  } else { // Home / default: semua 45 lagu
+    selectedSong = (selectedSong + 1) % players.length;
+  }
+  playSong(selectedSong);
+}
+
+void prevSong() {
+  // Gunakan playContext (dari mana lagu dimulai), bukan currentPage yang berubah
+  if (playContext == 1) { // Playlist yang Disukai: lagu 0-4
+    selectedSong--;
+    if (selectedSong < 0) selectedSong = 4;
+  } else if (playContext == 2) { // Lagu Sering Diputar: semua 45 lagu
+    selectedSong--;
+    if (selectedSong < 0) selectedSong = 44;
+  } else if (playContext == 3) { // Album Nisa: 5 lagu per album
+    int start = 10 + selectedAlbumIndex * 5;
+    int end = start + 4;
+    selectedSong--;
+    if (selectedSong < start) selectedSong = end;
+  } else { // Home / default: semua 45 lagu
+    selectedSong = (selectedSong - 1 + players.length) % players.length;
+  }
+  playSong(selectedSong);
+}
+
+void draw() {
+  if (currentPage == -1) {
+    drawSplashScreen();
+    return;
+  }
+
+  if (currentPage == 9) {
+    drawProfileScreen();
+    return;
+  }
+
+  if (currentPage == 7) {
+    drawIPodPlayer();
+  } else {
+    drawGradientBackground();
+    if (currentPage != 6 && currentPage != 7) {
+      drawSidebar();
+      if (currentPage != 0 && currentPage != 3) drawHeader();
+    }
+
+    if (currentPage == 0) {
+      drawMainContent();
+    } else if (currentPage == 1) {
+      drawCategoriesContent();
+    } else if (currentPage == 2) {
+      drawLibraryContent();
+    } else if (currentPage == 3) {
+      drawAlbumNisaContent();
+    } else if (currentPage == 4) {
+      drawAboutYouContent();
+    } else if (currentPage == 5) {
+      drawFullScreenPlayer();
+    } else if (currentPage == 6) {
+      drawLyricsScreen();
+    } else if (currentPage == 8) {
+      drawSearchResultsContent();
+    } else if (currentPage == 10) {
+      drawKaraukeContent();
+    }
+  }
+
+  // Animation for UI Offset when music plays
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    uiOffset = lerp(uiOffset, -40, 0.1);
+  } else {
+    uiOffset = lerp(uiOffset, 0, 0.1);
+  }
+
+  // Auto-next logic: play next song when current song finishes
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    autoNextTriggered = false; // Reset flag while song is playing
+  }
+  if (currentPlayer != null && !currentPlayer.isPlaying() && !autoNextTriggered
+    && currentPlayer.position() > 0 && currentPlayer.position() >= currentPlayer.length() - 200) {
+    autoNextTriggered = true;
+    if (isRepeat) {
+      // Mode repeat: putar ulang lagu yang sama
+      playSong(selectedSong);
+    } else if (isShuffle) {
+      // Mode shuffle: pilih lagu acak sesuai konteks
+      if (playContext == 1) selectedSong = (int)random(5);
+      else if (playContext == 3) {
+        int s = 10 + selectedAlbumIndex * 5;
+        selectedSong = s + (int)random(5);
+      } else selectedSong = (int)random(players.length);
+      playSong(selectedSong);
+    } else {
+      nextSong();
+    }
+  }
+
+  // Smooth scroll lerp
+  homeScrollY = lerp(homeScrollY, targetHomeScrollY, 0.15);
+  albumScrollY = lerp(albumScrollY, targetAlbumScrollY, 0.15);
+  libScrollY = lerp(libScrollY, targetLibScrollY, 0.15);
+  catScrollY = lerp(catScrollY, targetCatScrollY, 0.15);
+
+  // Album open animation
+  if (currentPage == 4) {
+    albumOpenAnim = lerp(albumOpenAnim, 1.0, 0.1);
+  } else {
+    albumOpenAnim = 0;
+  }
+
+  // Update smooth progress bar
+  if (currentPlayer != null && currentPlayer.length() > 0) {
+    float targetProgress = (float)currentPlayer.position() / currentPlayer.length();
+    // Jika lompatan terlalu jauh (misal pindah lagu), reset langsung
+    if (abs(smoothProgress - targetProgress) > 0.1) smoothProgress = targetProgress;
+    else smoothProgress = lerp(smoothProgress, targetProgress, 0.1);
+  } else {
+    smoothProgress = 0;
+  }
+}
+
+void mouseWheel(MouseEvent event) {
+  float e = event.getCount();
+  if (currentPage == 0) {
+    targetHomeScrollY -= e * 60;
+    float maxScroll = - ( (songsList.length / 3) * 260 - (height - 200) );
+    if (maxScroll > 0) maxScroll = 0;
+    targetHomeScrollY = constrain(targetHomeScrollY, maxScroll, 0);
+  } else if (currentPage == 3) {
+    targetAlbumScrollY -= e * 60;
+    float maxScroll = - ( ceil(albumNames.length / 3.0) * 300 - (height - 200) );
+    if (maxScroll > 0) maxScroll = 0;
+    targetAlbumScrollY = constrain(targetAlbumScrollY, maxScroll, 0);
+  } else if (currentPage == 2) {
+    targetLibScrollY -= e * 60;
+    float maxScroll = - ( players.length * 65 - (height - 200) );
+    if (maxScroll > 0) maxScroll = 0;
+    targetLibScrollY = constrain(targetLibScrollY, maxScroll, 0);
+  } else if (currentPage == 1) {
+    targetCatScrollY -= e * 60;
+    float maxScroll = - ( ceil(songsList.length / 3.0) * 370 - (height - 200) );
+    if (maxScroll > 0) maxScroll = 0;
+    targetCatScrollY = constrain(targetCatScrollY, maxScroll, 0);
+  }
+}
+
+void mousePressed() {
+  int clickTime = millis();
+  boolean isDoubleClick = (clickTime - lastClickTime < 300);
+  lastClickTime = clickTime;
+
+  // Jika di layar Splash Screen (-1) atau Profil (9), ketuk 2 kali untuk langsung ke beranda
+  if (isDoubleClick && (currentPage == -1 || currentPage == 9)) {
+    currentPage = 0;
+    return;
+  }
+
+  if (currentPage == -1) {
+    return; // Jangan proses klik lain saat splash screen
+  }
+
+  updateControls(mouseX, mouseY);
+
+  if (currentPage == 9) {
+    // Tombol Kembali di Profil (kiri atas)
+    if (mouseX > 20 && mouseX < 150 && mouseY > 30 && mouseY < 80) {
+      currentPage = 0; // Kembali ke Home
+    }
+    return; // Berhenti agar tidak memproses klik menu lain di background
+  }
+
+  // Sidebar Navigation
+  if (currentPage != 6 && mouseX > 20 && mouseX < 230) {
+    if (mouseY > 95 && mouseY < 135) currentPage = 0;
+    else if (mouseY > 145 && mouseY < 185) currentPage = 1;
+    else if (mouseY > 195 && mouseY < 235) currentPage = 2;
+    else if (mouseY > 245 && mouseY < 285) currentPage = 3;
+    else if (mouseY > 290 && mouseY < 325) currentPage = 4;
+    else if (mouseY > 345 && mouseY < 385) currentPage = 10; // Karauke
+    else if (mouseY > 395 && mouseY < 435 && searchQuery.length() > 0) currentPage = 8; // Search Results
+
+
+    // Sidebar Mini Player Play Button
+    float miniY = height - 95;
+    // Play Button
+    if (dist(mouseX, mouseY, 200, miniY + 40) < 20) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    // Clicking Mini Art -> Open Player
+    if (mouseX > 10 && mouseX < 240 && mouseY > miniY && mouseY < miniY + 80) {
+      currentPage = 7;
+    }
+
+    // Clear search when switching pages
+    searchFocused = false;
+    searchQuery = "";
+  }
+
+  // Header Buttons (Top Right)
+  float rightOffset = width - 420;
+  // Heart Icon -> Liked Playlist
+  if (dist(mouseX, mouseY, rightOffset + 30, 52 + uiOffset) < 20) {
+    currentPage = 1;
+  }
+  // Cart Icon
+  if (dist(mouseX, mouseY, rightOffset + 90, 52 + uiOffset) < 20) {
+    println("Cart clicked!");
+  }
+  // Profile Picture in Header (Top Right)
+  if (dist(mouseX, mouseY, width - 275, 52 + uiOffset) < 20) {
+    currentPage = 9;
+  }
+
+  // Search Bar Focusing
+  if (mouseX > 280 && mouseX < 730 && mouseY > 30 + uiOffset && mouseY < 75 + uiOffset) {
+    searchFocused = true;
+  } else {
+    searchFocused = false;
+  }
+  // Search Results Page Interaction
+  if (currentPage == 8 && mouseX > 280 && mouseX < width - 150) {
+    for (int i = 0; i < searchResultIndices.size(); i++) {
+      float y = 180 + i * 55;
+      if (mouseY > y - 25 && mouseY < y + 30) {
+        selectedSong = searchResultIndices.get(i);
+        setPlayContext(2); // Anggap semua lagu seperti library
+        playSong(selectedSong);
+        currentPage = 7; // Go to iPod player
+      }
+    }
+  }
+
+  // 10: Fav Memories Interaction (Sing like a star!)
+  if (currentPage == 10) {
+    float lx = 300;
+    float ly = 180;
+    float lw = width - 350;
+    float lh = height - 300;
+
+    if (!showVideoMomen) {
+      // Toggle based on text click when video is not showing
+      float tx_text = lx + lw/2;
+      float ty_text = ly + lh - 70;
+      if (mouseX > tx_text - 100 && mouseX < tx_text + 100 && mouseY > ty_text - 30 && mouseY < ty_text + 30) {
+        showVideoMomen = true;
+        if (vidioMomen != null) vidioMomen.loop();
+        isPlayingMomen = true;
+        showMomenControls = false;
+      }
+    } else {
+      float tx = lx - 20;
+      float ty = ly + 40;
+      float tw = lw + 40;
+      float th = lh - 10;
+      float tabW = 250;
+      float tabH = 35;
+
+      // Close video button ('x' on tab)
+      if (mouseX > tx + tabW - 30 && mouseX < tx + tabW && mouseY > ty - tabH && mouseY < ty) {
+        showVideoMomen = false;
+        if (vidioMomen != null) vidioMomen.pause();
+        isPlayingMomen = false;
+        return; // Prevent further processing in this click
+      }
+
+      // Video Area Clicks
+      float headerH = 50;
+      float sbW = 30;
+      float cx = tx + 15;
+      float cy = ty + headerH + 15;
+      float cw = tw - sbW - 30;
+      float ch = th - headerH - 30;
+
+      float ctrlW = 350;
+      float ctrlH = 80;
+      float ctrlX = cx + cw/2 - ctrlW/2;
+      float ctrlY = cy + ch - ctrlH - 20;
+
+      if (mouseX > cx && mouseX < cx + cw && mouseY > cy && mouseY < cy + ch) {
+        if (showMomenControls && mouseX > ctrlX && mouseX < ctrlX + ctrlW && mouseY > ctrlY && mouseY < ctrlY + ctrlH) {
+          // Clicked inside playback controls
+          float playBtnX = ctrlX + ctrlW/2;
+          // Wider hitbox for the play/pause button (width 80, height 60)
+          if (mouseX > playBtnX - 40 && mouseX < playBtnX + 40 && mouseY > ctrlY + 10 && mouseY < ctrlY + 70) {
+            // Toggle play/pause
+            if (vidioMomen != null) {
+              if (isPlayingMomen) {
+                vidioMomen.pause();
+                isPlayingMomen = false;
+              } else {
+                vidioMomen.loop(); // use loop() so it continues continuously
+                isPlayingMomen = true;
+              }
+            }
+          }
+        } else {
+          // Clicked outside controls but inside video: toggle controls overlay
+          showMomenControls = !showMomenControls;
+        }
+      }
+    }
+  }
+
+  // 1: Categories (Liked Playlist) Interaction
+  if (currentPage == 1 && mouseX > 280 && mouseX < width - 50) {
+    float startX = 280;
+    float startY = 130;
+    float cardW = 260;
+    float cardH = 340;
+    float spacing = 30;
+
+    for (int i = 0; i < songsList.length; i++) {
+      int col = i % 3;
+      int row = i / 3;
+      float ax = startX + (cardW + spacing) * col;
+      float ay = startY + (cardH + spacing) * row + catScrollY;
+
+      // Play/Pause button in card
+      float iconY = ay + cardH - 45;
+      if (dist(mouseX, mouseY, ax + cardW/2, iconY) < 25) {
+        if (selectedSong == i) {
+          if (currentPlayer != null) {
+            if (currentPlayer.isPlaying()) currentPlayer.pause();
+            else currentPlayer.play();
+          }
+        } else {
+          selectedSong = i;
+          setPlayContext(1);
+          playSong(selectedSong);
+        }
+      }
+
+      // Card selection (clicking the art)
+      if (mouseX > ax && mouseX < ax + cardW && mouseY > ay && mouseY < ay + cardH - 80) {
+        selectedSong = i;
+        setPlayContext(1);
+        playSong(selectedSong);
+        currentPage = 6; // Go to Lyrics
+      }
+    }
+  }
+  // Home Page Interaction
+  if (currentPage == 0) {
+    // Profile Icon (kiri atas konten)
+    if (dist(mouseX, mouseY, 300, 60 + uiOffset) < 25) {
+      currentPage = 9;
+    }
+
+    // Filter Chips
+    if (mouseY > 90 && mouseY < 130) {
+      if (mouseX > 280 && mouseX < 370) activeFilter = 0;
+      else if (mouseX > 380 && mouseX < 470) activeFilter = 1;
+    }
+
+    // Search Icon (kanan atas) → buka search
+    if (dist(mouseX, mouseY, 1050, 60) < 20) {
+      searchFocused = true;
+    }
+    // Plus Icon (kanan atas) → buka Library
+    if (dist(mouseX, mouseY, 1100, 60) < 20) {
+      currentPage = 2;
+    }
+
+    // Preview panel controls (kanan layar)
+    // Koordinat panel preview mengikuti drawLargeAlbumPreview: x=740, y=100+uiOffset*1.5
+    float pvX = 740;
+    float pvY = 100 + uiOffset * 1.5;
+    float ctrlW = 400;
+    float ctrlY = pvY + 500;
+    float iconY = ctrlY + 50;
+    float iconSpacing = ctrlW / 4;
+
+    // Heart / Like toggle
+    if (dist(mouseX, mouseY, pvX + ctrlW - 20, ctrlY - 20) < 18) {
+      if (selectedSong >= 0 && selectedSong < isLiked.length)
+        isLiked[selectedSong] = !isLiked[selectedSong];
+    }
+
+    // Progress Bar click (scrubbing)
+    if (mouseY > ctrlY - 8 && mouseY < ctrlY + 8
+      && mouseX > pvX && mouseX < pvX + ctrlW) {
+      if (currentPlayer != null && currentPlayer.length() > 0) {
+        int newPos = (int)map(mouseX, pvX, pvX + ctrlW, 0, currentPlayer.length());
+        currentPlayer.cue(newPos);
+      }
+    }
+
+    // Share button (previously shuffle)
+    if (dist(mouseX, mouseY, pvX + 10, iconY) < 25) {
+      println("Sharing " + songsList[selectedSong]);
+    }
+    // Prev button
+    if (dist(mouseX, mouseY, pvX + iconSpacing, iconY) < 18) {
+      prevSong();
+    }
+    // Play/Pause button (besar)
+    if (dist(mouseX, mouseY, pvX + ctrlW/2, iconY) < 28) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    // Next button
+    if (dist(mouseX, mouseY, pvX + ctrlW - iconSpacing, iconY) < 18) {
+      if (isShuffle) {
+        // Shuffle: pilih lagu acak
+        selectedSong = (int)random(players.length);
+        setPlayContext(0);
+        playSong(selectedSong);
+      } else {
+        nextSong();
+      }
+    }
+    // Heart / Like button (previously repeat)
+    if (dist(mouseX, mouseY, pvX + ctrlW - 10, iconY) < 25) {
+      if (selectedSong >= 0 && selectedSong < isLiked.length)
+        isLiked[selectedSong] = !isLiked[selectedSong];
+    }
+
+    // Song Grid
+    float startX = 280;
+    float startY = 180;
+    float cardW = 250;
+    float cardH = 180;
+    float spacing = 30;
+
+    float mx = mouseX;
+    float my = mouseY - homeScrollY; // Adjust for scroll
+
+    for (int i = 0; i < songsList.length; i++) {
+      int col = i % 3;
+      int row = i / 3;
+      float ax = startX + (cardW + spacing) * col;
+      float ay = startY + (cardH + 80) * row;
+
+      // Klik area card (gambar) → play lagu
+      if (mx > ax && mx < ax + cardW && my > ay && my < ay + cardH) {
+        selectedSong = i % players.length;
+        setPlayContext(0); // Home: semua lagu (0-44)
+        playSong(selectedSong);
+        currentPage = 5;
+      }
+      // Klik download icon (lingkaran hijau di bawah card)
+      if (dist(mx, my, ax + 10, ay + cardH + 60) < 12) {
+        // Download icon: toggle like sebagai penanda download
+        if (i < isLiked.length) isLiked[i] = !isLiked[i];
+      }
+    }
+  }
+
+  // 3: Album Page Interaction
+  if (currentPage == 3) {
+    // Profile Icon (kiri atas konten)
+    if (dist(mouseX, mouseY, 300, 60 + uiOffset) < 25) {
+      currentPage = 9;
+    }
+
+    float startX = 280;
+    float startY = 180;
+    float cardW = 250;
+    float cardH = 220; // 220 is the height of the CD card
+    float mx = mouseX;
+    float my = mouseY - albumScrollY;
+
+    for (int i = 0; i < albumNames.length; i++) { // Loop for all albums
+      int col = i % 3;
+      int row = i / 3;
+      float ax = startX + (col * 280);
+      float ay = startY + (row * 300);
+      if (mx > ax && mx < ax + cardW && my > ay && my < ay + cardH) {
+        selectedAlbumIndex = i; // Save which album was clicked
+        currentPage = 4; // Buka menu detail untuk album ini
+
+        int startSong = 10 + selectedAlbumIndex * 5;
+        selectedSong = startSong;
+        setPlayContext(3); // Album Nisa: 5 lagu per album
+        playSong(selectedSong);
+      }
+    }
+  }
+
+  // 4: Album Detail Interaction
+  if (currentPage == 4) {
+    float startX = 280;
+    float startY = 130;
+    float w = width - startX - 50;
+    float h1 = 280;
+
+    // Back button
+    if (mouseX > 280 && mouseX < 370 && mouseY > 80 && mouseY < 110) {
+      currentPage = 3;
+    }
+
+    // Top Card (Player) Controls
+    float ctrlY = startY + 230;
+    float cx = startX + 180;
+    if (dist(mouseX, mouseY, cx, ctrlY) < 25) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    if (dist(mouseX, mouseY, startX + 120, ctrlY) < 18) prevSong();
+    if (dist(mouseX, mouseY, startX + 240, ctrlY) < 18) nextSong();
+
+    // Clicking art -> Open Lyrics
+    if (mouseX > startX + w - 230 && mouseX < startX + w - 30 && mouseY > startY + 30 && mouseY < startY + 230) {
+      currentPage = 6;
+    }
+
+    // Bottom Card (Song List)
+    float listY = startY + h1 + 50;
+    int startIdx = 25; // Base index for Java Pride, but generic uses album-specific
+    if (selectedAlbumIndex != 3) startIdx = 10 + selectedAlbumIndex * 5;
+
+    for (int i = 0; i < 5; i++) {
+      int col = i / 3;
+      int row = i % 3;
+      float sx = startX + 30 + col * (w/2);
+      float sy = listY + 30 + row * 90;
+      if (mouseX > sx && mouseX < sx + (w/2) - 50 && mouseY > sy && mouseY < sy + 80) {
+        selectedSong = startIdx + i;
+        setPlayContext(3);
+        playSong(selectedSong);
+        currentPage = 6;
+      }
+    }
+  }
+
+  // 6: Lyrics Screen Interaction
+  if (currentPage == 6) {
+    // Back Button
+    if (mouseX > 30 && mouseX < 130 && mouseY > 30 && mouseY < 70) {
+      currentPage = 4;
+    }
+
+    float leftW = width * 0.45;
+    float artSize = (leftW - 100) * 0.7;
+    float artX = (leftW - artSize) / 2;
+    float artY = 120;
+    float cx = artX + artSize/2;
+    float ctrlY = artY + artSize + 130;
+
+    // Play/Pause
+    if (dist(mouseX, mouseY, cx, ctrlY) < 35) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    // Shuffle
+    if (dist(mouseX, mouseY, cx - 140, ctrlY) < 20) isShuffle = !isShuffle;
+    // Repeat
+    if (dist(mouseX, mouseY, cx + 140, ctrlY) < 20) isRepeat = !isRepeat;
+    // Prev/Next
+    if (dist(mouseX, mouseY, cx - 80, ctrlY) < 20) prevSong();
+    if (dist(mouseX, mouseY, cx + 80, ctrlY) < 20) nextSong();
+  }
+
+  // 2: Library Page (Lagu Sering Diputar) Click
+  if (currentPage == 2) {
+    float contentX = 280;
+    float contentW = width - 350;
+    float btnY = 110;
+    float btnW = (contentW - 20) / 2;
+
+    float my = mouseY - libScrollY;
+
+    // Play Button Click
+    if (mouseX > contentX && mouseX < contentX + btnW && my > btnY && my < btnY + 45) {
+      selectedSong = 0;
+      setPlayContext(2); // Lagu Sering Diputar: semua 45 lagu
+      playSong(selectedSong);
+      currentPage = 7;
+    }
+    // Shuffle Button Click
+    else if (mouseX > contentX + btnW + 20 && mouseX < contentX + btnW + 20 + btnW && my > btnY && my < btnY + 45) {
+      selectedSong = (int)random(songsList.length);
+      setPlayContext(2); // Lagu Sering Diputar: semua 45 lagu
+      playSong(selectedSong);
+      currentPage = 7;
+    }
+    // List Click
+    else if (mouseX > contentX && mouseX < contentX + contentW && my > 180) { // Below headers/buttons
+      for (int i = 0; i < songsList.length; i++) { // Loop for all songs
+        float y = 180 + i * 65;
+        if (my > y && my < y + 65) {
+          selectedSong = i;
+          setPlayContext(2); // Lagu Sering Diputar: semua 45 lagu
+          playSong(selectedSong);
+          currentPage = 7; // Switch to iPod Template
+        }
+      }
+    }
+  }
+
+  // 7: iPod Interaction
+  if (currentPage == 7) {
+    float s = 0.7;
+    float centerX = width/2;
+    float centerY = height/2;
+    float ipodW = 850 * s;
+    float ipodH = 480 * s;
+    float screenW = 450 * s;
+    float screenH = 380 * s;
+    float screenX = centerX - ipodW/2 + (35 * s);
+    float screenY = centerY - screenH/2;
+
+    // Progress Bar (Scrubbing)
+    float barX = screenX + (40 * s);
+    float barY = screenY + screenH - (60 * s);
+    float barW = screenW - (80 * s);
+
+    if (mouseX > barX && mouseX < barX + barW && mouseY > barY - 15 && mouseY < barY + 15) {
+      if (currentPlayer != null) {
+        int newPos = (int)map(mouseX, barX, barX + barW, 0, currentPlayer.length());
+        currentPlayer.cue(newPos);
+      }
+    }
+
+    float wheelX = centerX + (230 * s);
+    float wheelY = centerY;
+
+    // MENU Button (Back)
+    if (dist(mouseX, mouseY, wheelX, wheelY - (110 * s)) < (40 * s)) {
+      currentPage = 2;
+    }
+    // Center Button (Play/Pause)
+    if (dist(mouseX, mouseY, wheelX, wheelY) < (50 * s)) {
+      if (currentPlayer.isPlaying()) currentPlayer.pause();
+      else currentPlayer.play();
+    }
+    // Bottom Play/Pause Icon area
+    if (dist(mouseX, mouseY, wheelX, wheelY + (110 * s)) < (40 * s)) {
+      if (currentPlayer.isPlaying()) currentPlayer.pause();
+      else currentPlayer.play();
+    }
+    // Prev
+    if (dist(mouseX, mouseY, wheelX - (110 * s), wheelY) < (40 * s)) {
+      prevSong();
+    }
+    // Next
+    if (dist(mouseX, mouseY, wheelX + (110 * s), wheelY) < (40 * s)) {
+      nextSong();
+    }
+  }
+
+  // 4: About You Album Page Click
+  if (currentPage == 4 && mouseX > 280 && mouseX < width - 50) {
+    // Back button click
+    if (mouseX > 280 && mouseX < 370 && mouseY > 80 && mouseY < 110) {
+      currentPage = 3;
+    }
+
+    // All albums in Album Nisa now use template styles
+    float x = 280;
+    float y = 130;
+    float w = width - x - 50;
+
+    // Controls
+    float ctrlY = y + 230;
+    if (dist(mouseX, mouseY, x + 120, ctrlY) < 25) prevSong();
+    if (dist(mouseX, mouseY, x + 180, ctrlY) < 30) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    if (dist(mouseX, mouseY, x + 240, ctrlY) < 25) nextSong();
+    if (dist(mouseX, mouseY, x + 300, ctrlY) < 25) {
+      if (selectedSong >= 0 && selectedSong < isLiked.length) {
+        isLiked[selectedSong] = !isLiked[selectedSong];
+      }
+    }
+    if (dist(mouseX, mouseY, x + 60, ctrlY) < 25) {
+      println("Sharing " + songsList[selectedSong]);
+    }
+
+    // Progress Bar Click
+    float barY = y + 180;
+    float barW = w - 350;
+    if (mouseX > x + 30 && mouseX < x + 30 + barW && mouseY > barY - 10 && mouseY < barY + 10) {
+      if (currentPlayer != null && currentPlayer.length() > 0) {
+        currentPlayer.cue((int)map(mouseX, x + 30, x + 30 + barW, 0, currentPlayer.length()));
+      }
+    }
+
+    // Song List Clicks
+    float listY = y + 280 + 50;
+    int startIdx = (selectedAlbumIndex == 3) ? 25 : (10 + selectedAlbumIndex * 5);
+    for (int i = 0; i < 5; i++) {
+      int col = i / 3;
+      int row = i % 3;
+      float sx = x + 30 + col * (w/2);
+      float sy = listY + 30 + row * 95;
+      if (mouseX > sx && mouseX < sx + (w/2) - 50 && mouseY > sy && mouseY < sy + 85) {
+        selectedSong = startIdx + i;
+        setPlayContext(3);
+        playSong(selectedSong);
+        // Only go to lyrics if it's NOT Sempurna, to allow popup to show
+        if (selectedSong != 14) currentPage = 6;
+      }
+    }
+  }
+
+  // 6: Modern Lyrics Player Controls
+  if (currentPage == 6) {
+    // Back button
+    if (mouseX > 30 && mouseX < 130 && mouseY > 30 && mouseY < 70) {
+      currentPage = 4;
+    }
+
+    float leftW = width * 0.45;
+    float artSize = (leftW - 100) * 0.7;
+    float artX = (leftW - artSize) / 2;
+    float artY = 120;
+    float ctrlY = artY + artSize + 130;
+
+    // Progress Bar Scrubbing
+    float barW = artSize;
+    if (mouseX > artX && mouseX < artX + barW && mouseY > ctrlY - 65 && mouseY < ctrlY - 45) {
+      if (currentPlayer != null && currentPlayer.length() > 0) {
+        currentPlayer.cue((int)map(mouseX, artX, artX + barW, 0, currentPlayer.length()));
+      }
+    }
+
+    // Buttons
+    float cx = artX + artSize/2;
+    if (dist(mouseX, mouseY, cx, ctrlY) < 35) { // Play/Pause
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    } else if (dist(mouseX, mouseY, cx - 80, ctrlY) < 25) { // Prev
+      prevSong();
+    } else if (dist(mouseX, mouseY, cx + 80, ctrlY) < 25) { // Next
+      nextSong();
+    } else if (dist(mouseX, mouseY, cx - 140, ctrlY) < 20) { // Shuffle
+      isShuffle = !isShuffle;
+    } else if (dist(mouseX, mouseY, cx + 140, ctrlY) < 20) { // Repeat
+      isRepeat = !isRepeat;
+    }
+
+    // Volume Slider
+    float volY = ctrlY + 70;
+    if (mouseX > artX + 50 && mouseX < artX + artSize - 50 && mouseY > volY - 15 && mouseY < volY + 15) {
+      volumeValue = constrain((mouseX - (artX + 50)) / (artSize - 100), 0, 1);
+      if (currentPlayer != null) currentPlayer.setGain(map(volumeValue, 0, 1, -40, 10));
+    }
+  }
+
+  // 5: Template Player Controls
+  if (currentPage == 5) {
+    float cx = 325 + 450;
+    float wy = 150;
+    float cy = wy + 30;
+    float ctrlY = cy + 220;
+
+    // Play/Pause
+    if (dist(mouseX, mouseY, cx + 160, ctrlY) < 30) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    // Prev
+    else if (dist(mouseX, mouseY, cx + 90, ctrlY) < 30) {
+      prevSong();
+    }
+    // Next
+    else if (dist(mouseX, mouseY, cx + 230, ctrlY) < 30) {
+      nextSong();
+    }
+  }
+
+  // 5: Interactive Controls Widget (Below Large Preview)
+  if (currentPage == 1 || currentPage == 4) {
+    float wx = 740;
+    float wy = 100 + uiOffset * 1.5 + 500;
+    float ww = 400;
+
+    // Play/Pause Circle
+    if (dist(mouseX, mouseY, wx + ww/2, wy + 50) < 25) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    // Prev
+    else if (dist(mouseX, mouseY, wx + 100, wy + 50) < 20) {
+      prevSong();
+    }
+    // Next
+    else if (dist(mouseX, mouseY, wx + 300, wy + 50) < 20) {
+      nextSong();
+    }
+  }
+
+  // Playback Controls Click (Bottom Bar)
+  float barY = height - 45;
+  float contentX = 280;
+  float contentW = width - 380;
+  float centerX = contentX + contentW/2;
+  float controlY = barY + 30;
+  if (controlY > height - 10) controlY = height - 15;
+
+  if (currentPage != 6 && mouseY > barY) {
+    // Play/Pause
+    if (dist(mouseX, mouseY, centerX, controlY) < 30) {
+      if (currentPlayer != null) {
+        if (currentPlayer.isPlaying()) currentPlayer.pause();
+        else currentPlayer.play();
+      }
+    }
+    // Previous
+    else if (mouseX > centerX - 70 && mouseX < centerX - 30) {
+      prevSong();
+    }
+    // Next
+    else if (mouseX > centerX + 30 && mouseX < centerX + 70) {
+      nextSong();
+    }
+  }
+}
+
+void drawSidebar() {
+  noStroke();
+  fill(sidebarColor);
+  rect(0, 0, 250, height);
+  fill(textColor);
+  drawRetroText("playlist nicaa", 30, 40, 28);
+
+  drawMenuItem("Home", 120, currentPage == 0);
+  drawMenuItem("Playlist yang Disukai", 170, currentPage == 1);
+  drawMenuItem("Lagu Sering Diputar", 220, currentPage == 2);
+  drawMenuItem("Album Nisa", 270, currentPage == 3);
+  drawMenuItem("fav memories", 360, currentPage == 10);
+
+  if (searchQuery.length() > 0) {
+    drawMenuItem("Hasil Cari: " + (searchQuery.length() > 10 ? searchQuery.substring(0, 10)+".." : searchQuery), 410, currentPage == 8);
+  }
+
+  // Sub-menu for active album
+  if (currentPage == 4) {
+    fill(255, 150);
+    rect(30, 290, 190, 30, 10);
+    fill(accentColor);
+  } else {
+    fill(textColor);
+  }
+  textSize(14);
+  if (currentPage == 4 && albumNames != null && selectedAlbumIndex < albumNames.length) {
+    text("↳ " + albumNames[selectedAlbumIndex], 60, 310);
+  } else if (currentPage == 4) {
+    text("↳ Album Detail", 60, 310);
+  }
+
+  stroke(subTextColor, 50);
+  line(30, 460, 220, 460);
+  noStroke();
+
+  // Mini Player Glowing Effect
+  float miniY = height - 95;
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    fill(accentColor, 30);
+    rect(5, miniY - 5, 240, 90, 15);
+  }
+
+  fill(255, 120);
+  rect(10, miniY, 230, 80, 15);
+
+  PImage miniArt = getSelectedImg();
+  if (miniArt != null) image(miniArt, 25, miniY + 15, 50, 50);
+
+  fill(textColor);
+  textSize(14);
+  if (selectedSong < songsList.length) text(songsList[selectedSong], 85, miniY + 35);
+  fill(subTextColor);
+  textSize(11);
+  if (selectedSong < artistsList.length) text(artistsList[selectedSong], 85, miniY + 55);
+
+  fill(accentColor);
+  ellipse(200, miniY + 40, 30, 30);
+  fill(255);
+  triangle(197, miniY + 32, 197, miniY + 48, 208, miniY + 40);
+}
+
+PImage getSelectedImg() {
+  if (selectedSong >= 0 && selectedSong < imgsList.length) {
+    if (imgsList[selectedSong] != null) {
+      return imgsList[selectedSong];
+    }
+  }
+  return song1;
+}
+
+void drawMenuItem(String label, float y, boolean active) {
+  if (active) {
+    fill(255, 150);
+    rect(20, y-25, 210, 40, 10);
+    fill(accentColor);
+  } else {
+    fill(textColor);
+  }
+  textSize(16);
+  text(label, 60, y);
+}
+
+void drawGradientBackground() {
+  for (int i = 0; i <= height; i++) {
+    float inter = map(i, 0, height, 0, 1);
+    color c = lerpColor(creamColor, pinkColor, inter);
+    stroke(c);
+    line(0, i, width, i);
+  }
+}
+
+void drawHeader() {
+  pushMatrix();
+  translate(0, uiOffset);
+
+  fill(255, searchFocused ? 180 : 100);
+  if (searchFocused) stroke(accentColor);
+  else noStroke();
+  rect(280, 30, 450, 45, 12);
+  noStroke();
+
+  fill(textColor);
+  textSize(14);
+  if (searchQuery.length() == 0 && !searchFocused) {
+    fill(textColor, 150);
+    text("Cari lagu, artis, atau album...", 320, 58);
+  } else {
+    String disp = searchQuery;
+    if (searchFocused && (frameCount / 30) % 2 == 0) disp += "|";
+    text(disp, 320, 58);
+  }
+
+  float rightOffset = width - 420;
+  drawIcon(rightOffset + 30, 52, "heart");
+  drawIcon(rightOffset + 90, 52, "cart");
+
+  fill(255, 100);
+  rect(width - 300, 30, 250, 45, 22);
+  fill(textColor);
+  textSize(14);
+  text("nicayy", width - 250, 50);
+  fill(subTextColor);
+  textSize(10);
+  text("View profile", width - 250, 65);
+  if (profileImg != null) {
+    image(profileImg, width - 293, 35, 35, 35);
+    noFill();
+    stroke(accentColor);
+    strokeWeight(2);
+    ellipse(width - 275, 52, 35, 35);
+  }
+  popMatrix();
+}
+
+void drawIcon(float x, float y, String type) {
+  fill(255, 100);
+  rect(x-20, y-22, 40, 40, 10);
+  stroke(textColor);
+  strokeWeight(2);
+  noFill();
+  if (type.equals("heart")) ellipse(x, y, 15, 15);
+  else if (type.equals("cart")) rect(x-8, y-8, 16, 16, 3);
+}
+
+void drawMainContent() {
+  pushMatrix();
+  translate(0, homeScrollY); // Apply scroll
+
+  pushMatrix();
+  translate(0, uiOffset);
+
+  // Profile small circle (moved to left like template)
+  if (profileImg != null) {
+    image(profileImg, 280, 40, 40, 40);
+    noFill();
+    stroke(accentColor);
+    strokeWeight(2);
+    ellipse(300, 60, 40, 40);
+  }
+
+  // Header section from template
+  drawRetroText("Music", 335, 45, 64);
+
+  // Icons at top right
+  drawIconSimple(1050, 60, "search");
+  drawIconSimple(1100, 60, "plus");
+
+  // Filter Chips
+  drawFilterChip("Playlists", 280, 110, activeFilter == 0);
+  drawFilterChip("By you", 380, 110, activeFilter == 1);
+
+  popMatrix();
+
+  // Grid of songs
+  drawSongGrid();
+
+  popMatrix();
+}
+
+void drawFilterChip(String label, float x, float y, boolean active) {
+  noStroke();
+  if (active) {
+    fill(40, 200, 100); // Spotify green
+  } else {
+    fill(textColor, 40);
+  }
+  rect(x, y - 18, 90, 32, 16);
+
+  fill(active ? 255 : textColor);
+  textSize(13);
+  textAlign(CENTER);
+  text(label, x + 45, y + 4);
+  textAlign(LEFT);
+}
+
+void drawHeroMusic() {
+  if (song1 != null) image(song1, 0, 0, 800, 300);
+  fill(255, 180);
+  rect(30, 150, 300, 120, 15);
+  fill(textColor);
+  textSize(12);
+  text("ARTIS UNGGULAN", 50, 180);
+  textSize(36);
+  text("NISA", 50, 220);
+  fill(accentColor);
+  rect(50, 230, 100, 30, 15);
+  fill(255);
+  textAlign(CENTER);
+  text("IKUTI", 100, 250);
+  textAlign(LEFT);
+}
+
+void drawSongGrid() {
+  float startX = 280;
+  float startY = 180;
+  float cardW = 250;
+  float cardH = 180;
+  float spacing = 30;
+
+  for (int i = 0; i < songsList.length; i++) {
+    int col = i % 3;
+    int row = i / 3;
+
+    float ax = startX + (cardW + spacing) * col;
+    float ay = startY + (cardH + 80) * row;
+
+    // Check if within bounds of window
+    if (ay > height - 100) break;
+
+    drawMusicCard(ax, ay, cardW, cardH, songsList[i], artistsList[i], imgsList[i]);
+  }
+}
+
+void drawMusicCard(float x, float y, float w, float h, String title, String artist, PImage img) {
+  // Cassette Style Artwork
+  fill(0, 20);
+  rect(x - 5, y - 5, w + 10, h + 10, 12); // Shadow/Glow
+
+  if (img != null) {
+    image(img, x, y, w, h);
+  } else {
+    fill(textColor, 20);
+    rect(x, y, w, h, 8);
+  }
+
+  // Now playing indicator
+  boolean isPlayingThis = false;
+  if (currentPlayer != null && currentPlayer == players[selectedSong]) {
+    // Check if the title in the grid matches the current selection index
+    // This is a more robust way than comparing metadata titles
+    for (int i = 0; i < songsList.length; i++) {
+      if (songsList[i].equals(title) && i == selectedSong) {
+        isPlayingThis = true;
+        break;
+      }
+    }
+  }
+
+  if (isPlayingThis) {
+    fill(accentColor, 150);
+    rect(x, y + h - 6, w, 6);
+    // Little playing icon
+    fill(255);
+    rect(x + w - 25, y + 10, 3, 10);
+    rect(x + w - 18, y + 5, 3, 15);
+    rect(x + w - 11, y + 12, 3, 8);
+  }
+
+  // Labels
+  fill(textColor);
+  textSize(16);
+  text(title, x, y + h + 25);
+
+  fill(subTextColor);
+  textSize(13);
+  text(artist, x, y + h + 45); // Dynamic artist name from artistsList
+
+  // Download icon (small green circle with arrow)
+  fill(40, 200, 100);
+  ellipse(x + 10, y + h + 60, 18, 18);
+  fill(255);
+  pushMatrix();
+  translate(x + 10, y + h + 60);
+  stroke(255);
+  strokeWeight(1.5);
+  line(0, -4, 0, 4);
+  line(-3, 1, 0, 4);
+  line(3, 1, 0, 4);
+  popMatrix();
+}
+
+void drawCategoriesContent() {
+  drawRetroText("Liked Playlist", 280, 45, 64);
+
+  pushMatrix();
+  translate(0, catScrollY);
+
+  float startX = 280;
+  float startY = 130;
+  float cardW = 260;
+  float cardH = 340;
+  float spacing = 30;
+
+  // Background Animated Butterflies
+  for (int i = 0; i < 6; i++) {
+    float bx = (noise(i * 50, frameCount * 0.002) * (width - 300)) + 280;
+    float by = (noise(i * 50 + 20, frameCount * 0.002) * height);
+    drawButterfly(bx, by, 20, 0.15);
+  }
+
+  // Display all songs in grid
+  for (int i = 0; i < songsList.length; i++) {
+    int col = i % 3;
+    int row = i / 3;
+    float ax = startX + (cardW + spacing) * col;
+    float ay = startY + (cardH + spacing) * row;
+
+    // Optimization: only draw visible cards
+    if (ay + catScrollY + cardH > 0 && ay + catScrollY < height) {
+      drawModernMusicCard(ax, ay, cardW, cardH, i);
+    }
+  }
+  popMatrix();
+}
+
+void drawModernMusicCard(float x, float y, float w, float h, int sIdx) {
+  // Card Body
+  fill(255);
+  noStroke();
+  rect(x, y, w, h, 25);
+
+  // Album Art (Top)
+  if (sIdx < imgsList.length && imgsList[sIdx] != null) {
+    imageMode(CORNER);
+    image(imgsList[sIdx], x + 15, y + 15, w - 30, h - 160);
+  }
+
+  // Info
+  textAlign(CENTER);
+  fill(textColor);
+  textFont(titleFont);
+  textSize(16);
+  text(songsList[sIdx], x + 20, y + h - 120, w - 40, 50);
+
+  fill(subTextColor);
+  textFont(mainFont);
+  textSize(12);
+  text(artistsList[sIdx], x + 20, y + h - 85, w - 40, 30);
+
+  // Progress Bar
+  float barY = y + h - 65;
+  stroke(textColor, 100);
+  strokeWeight(2);
+  line(x + 30, barY, x + w - 30, barY);
+
+  if (selectedSong == sIdx && currentPlayer != null) {
+    stroke(textColor);
+    line(x + 30, barY, x + 30 + (w-60) * smoothProgress, barY);
+    fill(textColor);
+    noStroke();
+    ellipse(x + 30 + (w-60) * smoothProgress, barY, 6, 6);
+  }
+
+  // Controls
+  float iconY = y + h - 45;
+  drawIconSimple(x + w/2 - 50, iconY, "prev");
+
+  fill(textColor);
+  ellipse(x + w/2, iconY, 35, 35);
+  fill(255);
+  if (selectedSong == sIdx && currentPlayer != null && currentPlayer.isPlaying()) {
+    rect(x + w/2 - 4, iconY - 6, 3, 12);
+    rect(x + w/2 + 1, iconY - 6, 3, 12);
+  } else {
+    triangle(x + w/2 - 3, iconY - 6, x + w/2 - 3, iconY + 6, x + w/2 + 6, iconY);
+  }
+
+  drawIconSimple(x + w/2 + 50, iconY, "next");
+
+  textAlign(LEFT);
+}
+
+void drawDynamicLyrics(float x, float y) {
+  String[] currentSongLyrics = allLyrics[0];
+  if (selectedSong >= 0 && selectedSong < allLyrics.length) {
+    currentSongLyrics = allLyrics[selectedSong];
+  }
+
+  // Container - Integrated into the preview layout
+  fill(0, 40);
+  noStroke();
+  rect(x-15, y-15, 430, 150, 20); // Premium glass container
+
+  int currentPos = (currentPlayer != null) ? currentPlayer.position() : 0;
+  int activeIndex = 0;
+  for (int i = 0; i < currentSongLyrics.length; i += 2) {
+    if (currentPos >= Integer.parseInt(currentSongLyrics[i])) activeIndex = i;
+  }
+
+  // Smooth scroll logic
+  targetLyricsScroll = - (activeIndex/2) * 30;
+  lyricsScroll = lerp(lyricsScroll, targetLyricsScroll, 0.1);
+
+  pushMatrix();
+  translate(x, y + 60 + lyricsScroll); // Center active line
+
+  for (int i = 0; i < currentSongLyrics.length; i += 2) {
+    String lyricLine = currentSongLyrics[i+1];
+    float ly = (i/2) * 35; // Increased spacing slightly
+
+    // Manual clipping/visibility check for performance and stability
+    float screenY = y + 60 + lyricsScroll + ly;
+    if (screenY < y - 10 || screenY > y + 140) continue;
+
+    float distance = abs(ly + lyricsScroll);
+    float opacity = map(distance, 0, 60, 255, 30);
+    float scale = map(distance, 0, 60, 1.2, 0.8);
+
+    if (i == activeIndex) {
+      fill(accentColor, opacity);
+      textSize(18 * scale);
+      text("• " + lyricLine, 10, ly);
+    } else {
+      fill(textColor, opacity);
+      textSize(14 * scale);
+      text(lyricLine, 30, ly);
+    }
+  }
+  popMatrix();
+}
+
+void drawLargeAlbumPreview(String title, PImage displayImg) {
+  float x = 740;
+  float y = 100 + uiOffset * 1.5;
+
+  // Album Art or Video Background
+  if (selectedSong == 10 && vidioAboutYou != null) {
+    if (vidioAboutYou.available()) vidioAboutYou.read();
+    image(vidioAboutYou, x, y, 400, 400);
+  } else if (selectedSong == 14 && vidioSempurna != null) {
+    if (vidioSempurna.available()) vidioSempurna.read();
+    image(vidioSempurna, x, y, 400, 400);
+  } else if (selectedSong == 12 && vidioMonolog != null) {
+    if (vidioMonolog.available()) vidioMonolog.read();
+    image(vidioMonolog, x, y, 400, 400);
+  } else if (selectedSong == 13 && vidioMasaIni != null) {
+    if (vidioMasaIni.available()) vidioMasaIni.read();
+    image(vidioMasaIni, x, y, 400, 400);
+  } else if (displayImg != null) {
+    image(displayImg, x, y, 400, 400);
+  }
+
+  fill(textColor);
+  textSize(24);
+  textAlign(CENTER);
+  text(title, x + 200, y + 440);
+  fill(subTextColor);
+  textSize(16);
+  text("Nisa", x + 200, y + 465);
+  textAlign(LEFT);
+
+  // Reference Image Style Controls below Title
+  float ctrlY = y + 500;
+  float ctrlW = 400;
+
+  // Heart icon (Top Right of controls)
+  drawIconSimple(x + ctrlW - 20, ctrlY - 20, "heart_full");
+
+  // Progress Bar
+  stroke(textColor, 50);
+  strokeWeight(2);
+  line(x, ctrlY, x + ctrlW, ctrlY);
+
+  stroke(textColor);
+  line(x, ctrlY, x + ctrlW * smoothProgress, ctrlY);
+  fill(textColor);
+  ellipse(x + ctrlW * smoothProgress, ctrlY, 10, 10);
+
+  // Timestamps
+  fill(subTextColor);
+  textSize(10);
+  String currentT = "0:00";
+  String remainingT = "-0:00";
+  if (currentPlayer != null) {
+    int pos = currentPlayer.position() / 1000;
+    int rem = (currentPlayer.length() - currentPlayer.position()) / 1000;
+    currentT = nf(pos/60, 1) + ":" + nf(pos%60, 2);
+    remainingT = "-" + nf(rem/60, 1) + ":" + nf(rem%60, 2);
+  }
+  text(currentT, x, ctrlY + 15);
+  textAlign(RIGHT);
+  text(remainingT, x + ctrlW, ctrlY + 15);
+  textAlign(LEFT);
+
+  // Icons row
+  float iconY = ctrlY + 50;
+  float spacing = ctrlW / 4;
+
+  drawIconSimple(x + 10, iconY, "share");
+  drawIconSimple(x + spacing, iconY, "prev");
+
+  // Big Play/Pause Circle
+  fill(255);
+  stroke(textColor);
+  strokeWeight(2);
+  ellipse(x + ctrlW/2, iconY, 60, 60);
+  fill(textColor);
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    rect(x + ctrlW/2 - 6, iconY - 10, 4, 20, 2);
+    rect(x + ctrlW/2 + 2, iconY - 10, 4, 20, 2);
+  } else {
+    triangle(x + ctrlW/2 - 4, iconY - 10, x + ctrlW/2 - 4, iconY + 10, x + ctrlW/2 + 10, iconY);
+  }
+
+  drawIconSimple(x + ctrlW - spacing, iconY, "next");
+  drawIconSimple(x + ctrlW - 10, iconY, "heart_full");
+
+  // Lirik Muncul Dibawah Tombol Play
+  if (currentPlayer != null && (currentPlayer.isPlaying() || currentPlayer.position() > 0)) {
+    drawDynamicLyrics(x, iconY + 40);
+  }
+}
+
+void drawIconSimple(float x, float y, String type) {
+  pushMatrix();
+  translate(x, y);
+  stroke(textColor);
+  strokeWeight(1.5);
+  noFill();
+
+  if (type.equals("heart_full")) {
+    boolean liked = (selectedSong >= 0 && selectedSong < isLiked.length) ? isLiked[selectedSong] : false;
+    fill(liked ? #FF4B4B : textColor);
+    noStroke();
+    beginShape();
+    vertex(0, 5);
+    bezierVertex(-10, -5, -15, -15, 0, -5);
+    bezierVertex(15, -15, 10, -5, 0, 5);
+    endShape(CLOSE);
+  } else if (type.equals("shuffle")) {
+    // Hijau kalau aktif, biasa kalau tidak
+    if (isShuffle) stroke(40, 200, 100);
+    else stroke(textColor);
+    line(-8, -5, 8, 5);
+    line(-8, 5, -2, 1);
+    line(2, -1, 8, -5);
+    triangle(8, 5, 4, 3, 6, 7);
+    triangle(8, -5, 4, -7, 6, -3);
+    if (isShuffle) {
+      fill(40, 200, 100);
+      noStroke();
+      ellipse(0, 8, 4, 4);
+    } // dot indicator
+  } else if (type.equals("prev")) {
+    fill(textColor);
+    noStroke();
+    triangle(4, -7, 4, 7, -4, 0);
+    rect(-6, -7, 2, 14);
+  } else if (type.equals("next")) {
+    fill(textColor);
+    noStroke();
+    triangle(-4, -7, -4, 7, 4, 0);
+    rect(4, -7, 2, 14);
+  } else if (type.equals("repeat")) {
+    // Hijau kalau aktif
+    if (isRepeat) stroke(40, 200, 100);
+    else stroke(textColor);
+    noFill();
+    arc(0, 0, 16, 12, -PI, PI/2);
+    line(8, 0, 8, -4);
+    if (isRepeat) fill(40, 200, 100);
+    else fill(textColor);
+    noStroke();
+    triangle(0, 6, -3, 3, 3, 3);
+    if (isRepeat) {
+      fill(40, 200, 100);
+      ellipse(0, -8, 4, 4);
+    } // dot indicator
+  } else if (type.equals("search")) {
+    noFill();
+    stroke(textColor);
+    strokeWeight(2);
+    ellipse(-2, -2, 12, 12);
+    line(4, 4, 8, 8);
+  } else if (type.equals("plus")) {
+    stroke(textColor);
+    strokeWeight(2);
+    line(-8, 0, 8, 0);
+    line(0, -8, 0, 8);
+  } else if (type.equals("share")) {
+    stroke(textColor);
+    strokeWeight(1.5);
+    noFill();
+    ellipse(-6, 0, 6, 6);
+    ellipse(6, -6, 6, 6);
+    ellipse(6, 6, 6, 6);
+    line(-3, 0, 3, -4);
+    line(-3, 0, 3, 4);
+  }
+  popMatrix();
+}
+
+void drawDetailedPlayback(String title) {
+  float barY = height - 45;
+  float contentX = 280;
+  float contentW = width - 380;
+
+  // Progress Bar - Linked to real MP3
+  float progress = 0;
+  String currentT = "0:00";
+  String totalT = "0:00";
+
+  if (currentPlayer != null && currentPlayer.length() > 0) {
+    progress = (float)currentPlayer.position() / currentPlayer.length();
+    int pos = currentPlayer.position() / 1000;
+    int len = currentPlayer.length() / 1000;
+    currentT = nf(pos/60, 1) + ":" + nf(pos%60, 2);
+    totalT = nf(len/60, 1) + ":" + nf(len%60, 2);
+  }
+
+  stroke(subTextColor, 100);
+  strokeWeight(3);
+  line(contentX, barY, contentX + contentW, barY);
+  stroke(accentColor);
+  line(contentX, barY, contentX + contentW * smoothProgress, barY);
+
+  fill(subTextColor);
+  textSize(11);
+  text(currentT, contentX - 35, barY + 5);
+  text(totalT, contentX + contentW + 15, barY + 5);
+
+  float centerX = contentX + contentW/2;
+  float controlY = barY + 30;
+  // Make sure controlY doesn't go off screen if height is small
+  if (controlY > height - 10) controlY = height - 15;
+
+  // Playback buttons removed as requested
+
+  fill(textColor);
+  textSize(14);
+  text(title, contentX, controlY);
+  fill(subTextColor);
+  textSize(11);
+  if (selectedSong < artistsList.length) text(artistsList[selectedSong], contentX, controlY + 15);
+
+  // Volume slider at far right
+  float volX = contentX + contentW - 60;
+  stroke(textColor);
+  strokeWeight(2);
+  noFill();
+  rect(volX, controlY - 5, 60, 10, 5);
+  fill(accentColor);
+  rect(volX, controlY - 5, 60 * volumeValue, 10, 5);
+}
+
+void drawLibraryContent() {
+  float contentX = 280;
+  float contentW = width - 350;
+
+  pushMatrix();
+  translate(0, libScrollY);
+
+  textFont(mainFont);
+
+  // Buttons
+  float btnY = 110;
+  float btnW = (contentW - 20) / 2;
+
+  // Play Button
+  fill(240, 240, 245);
+  noStroke();
+  rect(contentX, btnY, btnW, 45, 10);
+  fill(250, 50, 80); // Red
+  triangle(contentX + btnW/2 - 25, btnY + 15, contentX + btnW/2 - 25, btnY + 30, contentX + btnW/2 - 12, btnY + 22.5);
+  textSize(18);
+  text("Play", contentX + btnW/2 - 2, btnY + 14);
+
+  // Shuffle Button
+  fill(240, 240, 245);
+  rect(contentX + btnW + 20, btnY, btnW, 45, 10);
+  fill(250, 50, 80);
+  // Simple shuffle icon representation
+  stroke(250, 50, 80);
+  strokeWeight(2);
+  noFill();
+  line(contentX + btnW + 20 + btnW/2 - 35, btnY + 18, contentX + btnW + 20 + btnW/2 - 25, btnY + 28);
+  line(contentX + btnW + 20 + btnW/2 - 35, btnY + 28, contentX + btnW + 20 + btnW/2 - 25, btnY + 18);
+  triangle(contentX + btnW + 20 + btnW/2 - 25, btnY + 28, contentX + btnW + 20 + btnW/2 - 28, btnY + 24, contentX + btnW + 20 + btnW/2 - 22, btnY + 24);
+  noStroke();
+  fill(250, 50, 80);
+  textSize(18);
+  text("Shuffle", contentX + btnW + 20 + btnW/2 - 15, btnY + 14);
+
+  float startY = 180;
+  float rowH = 65;
+
+  for (int i = 0; i < songsList.length; i++) {
+    float y = startY + i * rowH;
+
+    // Separator (only between items, not top/bottom)
+    if (i > 0) {
+      stroke(230, 230, 230, 100);
+      strokeWeight(1);
+      line(contentX + 50, y, contentX + contentW, y);
+    }
+
+    noStroke();
+
+    // Highlight if selected (subtle)
+    if (i == selectedSong) {
+      fill(250, 50, 80, 20);
+      rect(contentX - 10, y, contentX + contentW - contentX + 20, rowH, 8);
+    }
+
+    // Star
+    fill(250, 50, 80);
+    drawStar(contentX + 10, y + 32, 4, 8, 5);
+
+    // Art (45x45)
+    if (i < imgsList.length && imgsList[i] != null) {
+      image(imgsList[i], contentX + 30, y + 10, 45, 45);
+    }
+
+    // Texts
+    fill(textColor);
+    textSize(16);
+    String title = (i < songsList.length) ? songsList[i] : "Unknown";
+    text(title, contentX + 85, y + 16);
+
+    fill(subTextColor);
+    textSize(13);
+    String artist = (i < artistsList.length) ? artistsList[i] : "Unknown";
+    text(artist, contentX + 85, y + 36);
+
+    // Icons on right
+    float rightX = contentX + contentW;
+    // Download icon
+    noFill();
+    stroke(subTextColor, 150);
+    strokeWeight(1.5);
+    ellipse(rightX - 45, y + 32, 20, 20);
+    line(rightX - 45, y + 26, rightX - 45, y + 36);
+    line(rightX - 49, y + 32, rightX - 45, y + 36);
+    line(rightX - 41, y + 32, rightX - 45, y + 36);
+
+    // Ellipsis
+    fill(subTextColor, 150);
+    noStroke();
+    ellipse(rightX - 15, y + 32, 3, 3);
+    ellipse(rightX - 8, y + 32, 3, 3);
+    ellipse(rightX - 1, y + 32, 3, 3);
+  }
+  popMatrix();
+}
+
+void drawAlbumNisaContent() {
+  pushMatrix();
+  translate(0, albumScrollY);
+
+  pushMatrix();
+  translate(0, uiOffset);
+
+  // Profile small circle (moved to left like template)
+  if (profileImg != null) {
+    image(profileImg, 280, 40, 40, 40);
+    noFill();
+    stroke(accentColor);
+    strokeWeight(2);
+    ellipse(300, 60, 40, 40);
+  }
+
+  // Header section
+  // Header section
+  drawRetroText("Music", 335, 45, 64);
+
+  // Icons at top right
+  drawIconSimple(1050, 60, "search");
+  drawIconSimple(1100, 60, "plus");
+
+  // Filter Chips
+  drawFilterChip("Playlists", 280, 110, activeFilter == 0);
+  drawFilterChip("By you", 380, 110, activeFilter == 1);
+
+  popMatrix();
+
+  // Grid of albums (CD Style)
+  float x = 280;
+  float y = 180;
+
+  for (int i = 0; i < albumNames.length; i++) {
+    int col = i % 3;
+    int row = i / 3;
+    float ax = x + (col * 280);
+    float ay = y + (row * 300);
+
+    drawCDCard(ax, ay, 250, 220, albumNames[i], albumCovers[i]);
+  }
+
+  popMatrix();
+}
+
+void drawAboutYouContent() {
+  if (selectedAlbumIndex == 3) {
+    drawJawaPrideTemplate();
+    return;
+  }
+  // Use generic template for all other albums (About You, Mood Shif, Playlist Nica, etc.)
+  drawGenericAlbumTemplate();
+}
+
+void drawJawaPrideTemplate() {
+  pushMatrix();
+  float yOffset = (1.0 - albumOpenAnim) * 50;
+  translate(0, yOffset);
+
+  // Background Decorations
+  for (int i = 0; i < 5; i++) {
+    fill(255, 100, 150, 100);
+    drawStar(300 + i*200, 100 + (i%2)*100, 5, 12, 4);
+  }
+
+  // Header "Hear Our Voices Blog Tour"
+  fill(textColor);
+  textSize(14);
+  textAlign(RIGHT);
+  text("Hear Our Voices Blog Tour", width - 50, 60);
+  textAlign(LEFT);
+
+  // Back button
+  fill(255, 150);
+  rect(280, 80, 90, 30, 15);
+  fill(textColor);
+  textSize(12);
+  text("< Kembali", 295, 100);
+
+  float x = 280;
+  float y = 130;
+  float w = width - x - 50;
+  float h1 = 280;
+
+  // --- TOP CARD: Player ---
+  drawTemplateCard(x, y, w, h1);
+
+  // Player Content
+  fill(textColor);
+  textSize(14);
+  text("It's You Every Time", x + 30, y + 40);
+  text("Playlist", x + 30, y + 60);
+
+  float leftW = w - 260;
+  textAlign(CENTER);
+  if (bubblyFont != null) textFont(bubblyFont);
+  textSize(38);
+  text(songsList[selectedSong], x + 30, y + 80, leftW, 100);
+
+  textFont(mainFont);
+  textSize(18);
+  text(artistsList[selectedSong], x + 30 + leftW/2, y + 150);
+  textAlign(LEFT);
+
+  // Duration
+  textAlign(RIGHT);
+  int totalSec = (currentPlayer != null) ? currentPlayer.length() / 1000 : 0;
+  String totalT = nf(totalSec/60, 1) + ":" + nf(totalSec%60, 2);
+  text(totalT, x + w - 300, y + 150);
+  textAlign(LEFT);
+
+  // Progress Bar
+  float barY = y + 180;
+  float barW = w - 350;
+  stroke(textColor);
+  strokeWeight(2);
+  line(x + 30, barY, x + 30 + barW, barY);
+  fill(textColor);
+  ellipse(x + 30 + barW * smoothProgress, barY, 10, 10);
+
+  // Controls
+  float ctrlY = y + 230;
+  drawIconSimple(x + 60, ctrlY, "share");
+  drawIconSimple(x + 120, ctrlY, "prev");
+
+  // Play/Pause Circle
+  fill(255);
+  stroke(textColor);
+  strokeWeight(2);
+  ellipse(x + 180, ctrlY, 60, 60);
+  fill(textColor);
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    rect(x + 180 - 6, ctrlY - 10, 4, 20, 2);
+    rect(x + 180 + 2, ctrlY - 10, 4, 20, 2);
+  } else {
+    triangle(x + 180 - 4, ctrlY - 10, x + 180 - 4, ctrlY + 10, x + 180 + 10, ctrlY);
+  }
+
+  drawIconSimple(x + 240, ctrlY, "next");
+  drawIconSimple(x + 300, ctrlY, "heart_full");
+
+  // Album Art or Video (Right side of card)
+  if (selectedSong == 10 && vidioAboutYou != null) {
+    if (vidioAboutYou.available()) vidioAboutYou.read();
+    image(vidioAboutYou, x + w - 230, y + 30, 200, 200);
+  } else if (selectedSong == 14 && vidioSempurna != null) {
+    if (vidioSempurna.available()) vidioSempurna.read();
+    image(vidioSempurna, x + w - 230, y + 30, 200, 200);
+  } else if (selectedSong == 12 && vidioMonolog != null) {
+    if (vidioMonolog.available()) vidioMonolog.read();
+    image(vidioMonolog, x + w - 230, y + 30, 200, 200);
+  } else if (selectedSong == 13 && vidioMasaIni != null) {
+    if (vidioMasaIni.available()) vidioMasaIni.read();
+    image(vidioMasaIni, x + w - 230, y + 30, 200, 200);
+  } else if (imgsList[selectedSong] != null) {
+    image(imgsList[selectedSong], x + w - 230, y + 30, 200, 200);
+  }
+
+  // Art Border
+  noFill();
+  stroke(textColor, 40);
+  rect(x + w - 230, y + 30, 200, 200, 15);
+
+  // --- BOTTOM CARD: Song List ---
+  y += h1 + 50;
+  float h2 = 320;
+  drawTemplateCard(x, y, w, h2);
+
+  // 2-Column Song List (Indices 25-29)
+  int startSong = 25;
+  for (int i = 0; i < 5; i++) {
+    int sIdx = startSong + i;
+    int col = i / 3;
+    int row = i % 3;
+    float sx = x + 30 + col * (w/2);
+    float sy = y + 30 + row * 90;
+
+    // Song Item
+    if (sIdx < songsList.length) {
+      // Small Thumb
+      if (imgsList[sIdx] != null) {
+        image(imgsList[sIdx], sx, sy, 70, 70);
+      } else {
+        fill(textColor, 20);
+        rect(sx, sy, 70, 70, 8);
+      }
+      noFill();
+      stroke(textColor, 30);
+      rect(sx, sy, 70, 70, 8);
+
+      // Texts
+      fill(textColor);
+      textSize(16);
+      textFont(titleFont);
+      text(songsList[sIdx], sx + 85, sy + 15, (w/2) - 180, 50);
+
+      fill(subTextColor);
+      textSize(12);
+      textFont(mainFont);
+      text(artistsList[sIdx], sx + 85, sy + 45);
+
+      // Heart Icon
+      drawIconSimple(sx + (w/2) - 80, sy + 35, "heart_full");
+    }
+  }
+
+  popMatrix();
+}
+
+void drawTemplateCard(float x, float y, float w, float h) {
+  pushStyle();
+  // Depth layers
+  noStroke();
+  fill(100, 80, 200); // Purple bottom
+  rect(x + 6, y + 10, w, h, 30);
+  fill(255, 100, 150); // Pink middle
+  rect(x + 3, y + 5, w, h, 30);
+
+  // Main Card
+  stroke(textColor);
+  strokeWeight(2);
+  fill(255);
+  rect(x, y, w, h, 30);
+  popStyle();
+}
+
+void drawGenericAlbumTemplate() {
+  pushMatrix();
+  float yOffset = (1.0 - albumOpenAnim) * 50;
+  translate(0, yOffset);
+
+  // Background Animated Butterflies
+  for (int i = 0; i < 4; i++) {
+    float bx = (noise(i * 30, frameCount * 0.004) * (width - 300)) + 280;
+    float by = (noise(i * 30 + 10, frameCount * 0.004) * height);
+    drawButterfly(bx, by, 18, 0.2);
+  }
+
+  // Header
+  fill(textColor);
+  textSize(14);
+  textAlign(LEFT);
+  text("Nisa's Premium Collection", 280, 60);
+
+  // Back button
+  fill(255, 180);
+  noStroke();
+  rect(280, 80, 90, 30, 15);
+  fill(textColor);
+  textSize(12);
+  text("< Kembali", 295, 100);
+
+  float x = 280;
+  float y = 130;
+  float w = width - x - 50;
+  float h1 = 280;
+
+  // --- TOP CARD: Player ---
+  drawTemplateCard(x, y, w, h1);
+
+  // Content
+  fill(subTextColor);
+  textSize(13);
+  text("Album: " + albumNames[selectedAlbumIndex], x + 30, y + 50);
+  stroke(textColor, 100);
+  line(x + 180, y + 46, x + 330, y + 46);
+
+  fill(textColor);
+  textFont(titleFont);
+  textSize(38);
+  text(songsList[selectedSong], x + 30, y + 80, w - 350, 100);
+
+  textFont(mainFont);
+  textSize(16);
+  if (selectedSong < artistsList.length) text(artistsList[selectedSong], x + 30, y + 150);
+
+  textAlign(RIGHT);
+  int totalSec = (currentPlayer != null) ? currentPlayer.length() / 1000 : 0;
+  String totalT = nf(totalSec/60, 1) + ":" + nf(totalSec%60, 2);
+  text(totalT, x + w - 300, y + 150);
+  textAlign(LEFT);
+
+  // Progress Bar
+  float barY = y + 180;
+  float barW = w - 350;
+  stroke(textColor);
+  strokeWeight(2);
+  line(x + 30, barY, x + 30 + barW, barY);
+  fill(textColor);
+  ellipse(x + 30 + barW * smoothProgress, barY, 10, 10);
+
+  // Controls
+  float ctrlY = y + 230;
+  drawIconSimple(x + 60, ctrlY, "share");
+  drawIconSimple(x + 120, ctrlY, "prev");
+
+  // Play/Pause Circle
+  fill(255);
+  stroke(textColor);
+  strokeWeight(2);
+  ellipse(x + 180, ctrlY, 60, 60);
+  fill(textColor);
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    rect(x + 180 - 6, ctrlY - 10, 4, 20, 2);
+    rect(x + 180 + 2, ctrlY - 10, 4, 20, 2);
+  } else {
+    triangle(x + 180 - 4, ctrlY - 10, x + 180 - 4, ctrlY + 10, x + 180 + 10, ctrlY);
+  }
+
+  drawIconSimple(x + 240, ctrlY, "next");
+  drawIconSimple(x + 300, ctrlY, "heart_full");
+
+  if (selectedSong == 10 && vidioAboutYou != null) {
+    if (vidioAboutYou.available()) vidioAboutYou.read();
+    image(vidioAboutYou, x + w - 320, y + 35, 290, 210);
+  } else if (selectedSong == 14 && vidioSempurna != null) {
+    if (vidioSempurna.available()) vidioSempurna.read();
+    image(vidioSempurna, x + w - 320, y + 35, 290, 210);
+  } else if (selectedSong == 12 && vidioMonolog != null) {
+    if (vidioMonolog.available()) vidioMonolog.read();
+    image(vidioMonolog, x + w - 320, y + 35, 290, 210);
+  } else if (selectedSong == 13 && vidioMasaIni != null) {
+    if (vidioMasaIni.available()) vidioMasaIni.read();
+    image(vidioMasaIni, x + w - 320, y + 35, 290, 210);
+  } else if (imgsList[selectedSong] != null) {
+    image(imgsList[selectedSong], x + w - 320, y + 35, 290, 210);
+  }
+
+  // Border for Art/Video
+  if (selectedSong == 10 || selectedSong == 14 || selectedSong == 12 || selectedSong == 13 || imgsList[selectedSong] != null) {
+    noFill();
+    stroke(textColor, 40);
+    rect(x + w - 320, y + 35, 290, 210, 20);
+  }
+
+  // --- BOTTOM CARD: List ---
+  y += h1 + 50;
+  float h2 = 330;
+  drawTemplateCard(x, y, w, h2);
+
+  int startSong = 10 + selectedAlbumIndex * 5;
+  for (int i = 0; i < 5; i++) {
+    int sIdx = startSong + i;
+    int col = i / 3;
+    int row = i % 3;
+    float sx = x + 30 + col * (w/2);
+    float sy = y + 30 + row * 95;
+
+    if (sIdx < songsList.length) {
+      if (imgsList[sIdx] != null) {
+        image(imgsList[sIdx], sx, sy, 85, 85);
+      } else {
+        fill(textColor, 20);
+        rect(sx, sy, 85, 85, 12);
+      }
+      noFill();
+      stroke(textColor, 30);
+      rect(sx, sy, 85, 85, 12);
+
+      fill(textColor);
+      textSize(17);
+      textFont(titleFont);
+      text(songsList[sIdx], sx + 100, sy + 20, (w/2) - 200, 50);
+
+      fill(subTextColor);
+      textSize(12);
+      textFont(mainFont);
+      if (sIdx < artistsList.length) text(artistsList[sIdx], sx + 100, sy + 55);
+
+      drawIconSimple(sx + (w/2) - 80, sy + 40, "heart_full");
+    }
+  }
+
+  popMatrix();
+}
+
+void drawVideoPopup(float lx, float ly, float lw, float lh, Movie vid, String title) {
+  pushStyle();
+  float tx = lx - 20;
+  float ty = ly + 40;
+  float tw = lw + 40;
+  float th = lh - 10;
+
+  color bgPink = color(251, 228, 228);
+  color tabPink = color(214, 162, 162);
+  color darkOutline = color(50, 20, 20);
+  color fillDarkPink = color(232, 197, 197);
+
+  // 1. BACK WINDOW
+  float bx = tx + tw - 50;
+  float by = ty - 60;
+  float bw = 150;
+  float bh = th + 40;
+  stroke(darkOutline);
+  strokeWeight(3);
+  fill(bgPink);
+  rect(bx, by, bw, bh, 5);
+  line(bx, by + 35, bx + bw, by + 35);
+  fill(bgPink);
+  ellipse(bx + bw - 20, by + 17, 10, 10);
+  ellipse(bx + bw - 40, by + 17, 10, 10);
+
+  // 2. FRONT WINDOW
+  float tabW = 250;
+  float tabH = 35;
+  stroke(darkOutline);
+  strokeWeight(3);
+  fill(bgPink);
+  rect(tx, ty, tw, th, 5);
+
+  // Header
+  float headerH = 50;
+  fill(tabPink);
+  rect(tx + 2, ty + 2, tw - 4, headerH - 12, 5, 5, 0, 0);
+  line(tx, ty + headerH, tx + tw, ty + headerH);
+
+  // Address pill
+  fill(fillDarkPink);
+  rect(tx + 65, ty + 5, tw - 130, 28, 14);
+  fill(darkOutline);
+  textSize(12);
+  textAlign(CENTER, CENTER);
+  text(title, tx + tw/2, ty + 19);
+
+  // Tab
+  fill(bgPink);
+  stroke(darkOutline);
+  beginShape();
+  vertex(tx, ty + 2);
+  vertex(tx, ty - tabH);
+  quadraticVertex(tx, ty - tabH - 5, tx + 5, ty - tabH - 5);
+  vertex(tx + tabW - 20, ty - tabH - 5);
+  quadraticVertex(tx + tabW, ty - tabH - 5, tx + tabW + 5, ty + 2);
+  endShape(CLOSE);
+
+  // 'x' on tab
+  line(tx + tabW - 20, ty - tabH + 12, tx + tabW - 10, ty - tabH + 22);
+  line(tx + tabW - 10, ty - tabH + 12, tx + tabW - 20, ty - tabH + 22);
+
+  // Video Area
+  float cx = tx + 15;
+  float cy = ty + headerH + 15;
+  float cw = tw - 60;
+  float ch = th - headerH - 30;
+
+  if (vid.width > 0) {
+    image(vid, cx, cy, cw, ch);
+    noFill();
+    stroke(darkOutline);
+    rect(cx, cy, cw, ch);
+  }
+  popStyle();
+}
+
+void drawCDCard(float x, float y, float w, float h, String title, PImage img) {
+  // Clear CD Case Rendering
+  noStroke();
+  fill(255, 40); // Plastic shine
+  rect(x, y, w, w, 15);
+
+  // Case Borders (Acrylic look)
+  stroke(255, 80);
+  strokeWeight(2);
+  noFill();
+  rect(x + 2, y + 2, w - 4, w - 4, 12);
+
+  // Inner Disc (Circle)
+  if (img != null) {
+    // Masked-like disc
+    pushMatrix();
+    translate(x + w/2, y + w/2);
+    noStroke();
+    fill(0, 30);
+    ellipse(0, 0, w - 20, w - 20); // Shadow
+
+    // The Disc Surface
+    fill(255);
+    ellipse(0, 0, w - 25, w - 25);
+
+    // Mini Album Art on Disc
+    imageMode(CENTER);
+    image(img, 0, 0, w - 30, w - 30); // Placeholder for actual masked circle
+    imageMode(CORNER);
+
+    // Spindle removed as requested
+    popMatrix();
+  }
+
+  // Labels
+  fill(textColor);
+  textSize(16);
+  text(title, x, y + w + 25);
+
+  fill(subTextColor);
+  textSize(13);
+  text("mee3", x, y + w + 45); // Artist as seen in template
+}
+
+void drawStat(String label, String value, float x, float y) {
+  // Function no longer used
+}
+
+void drawFullScreenPlayer() {
+  float ww = 800;
+  float wh = 450;
+  float wx = 250 + (width - 250 - ww)/2;
+  float wy = (height - wh)/2;
+
+  fill(15, 15, 15);
+  noStroke();
+  rect(wx, wy, ww, wh, 40);
+
+  // Album Art or Video
+  if (selectedSong == 10 && vidioAboutYou != null) {
+    image(vidioAboutYou, wx + 30, wy + 30, 390, 390);
+  } else if (selectedSong == 14 && vidioSempurna != null) {
+    image(vidioSempurna, wx + 30, wy + 30, 390, 390);
+  } else if (selectedSong == 12 && vidioMonolog != null) {
+    image(vidioMonolog, wx + 30, wy + 30, 390, 390);
+  } else if (selectedSong == 13 && vidioMasaIni != null) {
+    image(vidioMasaIni, wx + 30, wy + 30, 390, 390);
+  } else {
+    PImage img = getSelectedImg();
+    if (img != null) {
+      image(img, wx + 30, wy + 30, 390, 390);
+    }
+  }
+
+  float cx = wx + 450; // Controls start X
+  float cy = wy + 30;  // Controls start Y
+
+  // Top right text
+  fill(150);
+  textSize(14);
+  text("iPhone", cx, cy + 15);
+
+  // Title and Artist
+  fill(255);
+  textSize(28);
+  textFont(titleFont);
+  text(songsList[selectedSong], cx, cy + 50);
+
+  // E icon (Explicit)
+  float tw = textWidth(songsList[selectedSong]);
+  fill(200);
+  rect(cx + tw + 10, cy + 30, 18, 18, 4);
+  fill(15);
+  textSize(12);
+  textFont(mainFont);
+  text("E", cx + tw + 15, cy + 44);
+
+  fill(180);
+  textSize(20);
+  textFont(mainFont);
+  text("Nisa", cx, cy + 85);
+
+  // Timeline
+  float progress = 0;
+  String currentT = "0:00";
+  String remainingT = "-0:00";
+  if (currentPlayer != null && currentPlayer.length() > 0) {
+    progress = (float)currentPlayer.position() / currentPlayer.length();
+    int pos = currentPlayer.position() / 1000;
+    int rem = (currentPlayer.length() - currentPlayer.position()) / 1000;
+    currentT = nf(pos/60, 1) + ":" + nf(pos%60, 2);
+    remainingT = "-" + nf(rem/60, 1) + ":" + nf(rem%60, 2);
+  }
+
+  float barY = cy + 140;
+  fill(150);
+  textSize(14);
+  text(currentT, cx, barY + 5);
+  text(remainingT, cx + 280, barY + 5);
+
+  stroke(80);
+  strokeWeight(4);
+  strokeCap(ROUND);
+  line(cx + 40, barY, cx + 270, barY);
+  stroke(200);
+  line(cx + 40, barY, cx + 40 + 230 * smoothProgress, barY);
+
+  // Controls
+  float ctrlY = cy + 220;
+
+  drawPlayerIcon(cx + 15, ctrlY, "star");
+  drawPlayerIcon(cx + 90, ctrlY, "prev_fill");
+  drawPlayerIcon(cx + 160, ctrlY, currentPlayer != null && currentPlayer.isPlaying() ? "pause_fill" : "play_fill");
+  drawPlayerIcon(cx + 230, ctrlY, "next_fill");
+  drawPlayerIcon(cx + 300, ctrlY, "airplay");
+
+  // Volume bar at bottom
+  float volY = wy + 390;
+  drawPlayerIcon(cx + 5, volY, "vol_down");
+  stroke(80);
+  strokeWeight(4);
+  strokeCap(ROUND);
+  line(cx + 30, volY, cx + 280, volY);
+  stroke(200);
+  line(cx + 30, volY, cx + 180, volY); // Hardcoded volume level
+  drawPlayerIcon(cx + 300, volY, "vol_up");
+}
+
+void drawLyricsPlayer() {
+  for (int i = 0; i <= height; i++) {
+    float inter = map(i, 0, height, 0, 1);
+    color c = lerpColor(color(60, 15, 15), color(10, 5, 5), inter);
+    stroke(c);
+    line(0, i, width, i);
+  }
+
+  fill(255, 150);
+  textSize(16);
+  textFont(mainFont);
+  text("< Kembali", 40, 50);
+
+  float artSize = min(400, height * 0.5);
+  float artX = 100;
+  float artY = (height - artSize - 150) / 2 + 50;
+
+  noStroke();
+  fill(0, 80);
+  rect(artX - 10, artY - 10, 420, 420, 20);
+
+  PImage img = getSelectedImg();
+  if (img != null) {
+    image(img, artX, artY, 400, 400);
+  } else {
+    fill(40);
+    rect(artX, artY, 400, 400, 15);
+  }
+
+  fill(255);
+  textSize(28);
+  textFont(titleFont);
+  text(songsList[selectedSong], artX, artY + 460);
+  fill(180);
+  textSize(18);
+  textFont(mainFont);
+  text("Nisa", artX, artY + 490);
+
+  float progress = 0;
+  String currentT = "0:00";
+  String remainingT = "-0:00";
+  if (currentPlayer != null && currentPlayer.length() > 0) {
+    progress = (float)currentPlayer.position() / currentPlayer.length();
+    int pos = currentPlayer.position() / 1000;
+    int rem = (currentPlayer.length() - currentPlayer.position()) / 1000;
+    currentT = nf(pos/60, 1) + ":" + nf(pos%60, 2);
+    remainingT = "-" + nf(rem/60, 1) + ":" + nf(rem%60, 2);
+  }
+
+  float barY = artY + 540;
+  stroke(80);
+  strokeWeight(4);
+  strokeCap(ROUND);
+  line(artX, barY, artX + 400, barY);
+  stroke(255);
+  line(artX, barY, artX + 400 * smoothProgress, barY);
+
+  fill(150);
+  textSize(12);
+  text(currentT, artX, barY + 20);
+  textAlign(RIGHT);
+  text(remainingT, artX + 400, barY + 20);
+  textAlign(LEFT);
+
+  float ctrlY = barY + 60;
+  drawPlayerIcon(artX + 20, ctrlY, "shuffle");
+  drawPlayerIcon(artX + 110, ctrlY, "prev_fill");
+  drawPlayerIcon(artX + 200, ctrlY, currentPlayer != null && currentPlayer.isPlaying() ? "pause_fill" : "play_fill");
+  drawPlayerIcon(artX + 290, ctrlY, "next_fill");
+  drawPlayerIcon(artX + 380, ctrlY, "repeat");
+
+  float volY = ctrlY + 60;
+  drawPlayerIcon(artX + 20, volY, "vol_down");
+  stroke(80);
+  strokeWeight(4);
+  line(artX + 50, volY, artX + 350, volY);
+  stroke(255);
+  line(artX + 50, volY, artX + 200, volY);
+  drawPlayerIcon(artX + 380, volY, "vol_up");
+
+  drawLyricsTemplate(700, height/2 - 100);
+}
+
+void drawLyricsTemplate(float lyrX, float startY) {
+  String[] currentSongLyrics = allLyrics[0];
+  if (selectedSong >= 0 && selectedSong < allLyrics.length) {
+    currentSongLyrics = allLyrics[selectedSong];
+  } else {
+    currentSongLyrics = new String[]{"0", "Lirik tidak tersedia untuk lagu ini."};
+  }
+
+  int currentPos = (currentPlayer != null) ? currentPlayer.position() : 0;
+  int activeIndex = 0;
+  for (int i = 0; i < currentSongLyrics.length; i += 2) {
+    if (currentPos >= Integer.parseInt(currentSongLyrics[i])) activeIndex = i;
+  }
+
+  targetLyricsScroll = - (activeIndex/2) * 80;
+  lyricsScroll = lerp(lyricsScroll, targetLyricsScroll, 0.1);
+
+  pushMatrix();
+  float lyrY = startY + lyricsScroll;
+  translate(lyrX, lyrY);
+
+  for (int i = 0; i < currentSongLyrics.length; i += 2) {
+    String lyricLine = currentSongLyrics[i+1];
+    float ly = (i/2) * 80;
+
+    float screenY = lyrY + ly;
+    if (screenY < 50 || screenY > height - 50) continue;
+
+    float distance = abs(ly + lyricsScroll);
+    float opacity = map(distance, 0, 160, 255, 60);
+    if (opacity < 60) opacity = 60;
+
+    if (i == activeIndex) {
+      fill(255, opacity);
+      textSize(36);
+      textFont(titleFont);
+      textLeading(40);
+      text(lyricLine, 0, ly, 450, 200);
+    } else {
+      fill(255, opacity * 0.5);
+      textSize(28);
+      textFont(titleFont);
+      textLeading(32);
+      text(lyricLine, 0, ly, 450, 200);
+    }
+  }
+  popMatrix();
+}
+
+void drawPlayerIcon(float x, float y, String type) {
+  pushMatrix();
+  translate(x, y);
+  stroke(255);
+  strokeWeight(2);
+  noFill();
+
+  if (type.equals("star")) {
+    beginShape();
+    vertex(0, -10);
+    vertex(3, -3);
+    vertex(10, -3);
+    vertex(4, 2);
+    vertex(6, 9);
+    vertex(0, 5);
+    vertex(-6, 9);
+    vertex(-4, 2);
+    vertex(-10, -3);
+    vertex(-3, -3);
+    endShape(CLOSE);
+  } else if (type.equals("prev_fill")) {
+    fill(255);
+    noStroke();
+    triangle(0, -10, 0, 10, -12, 0);
+    triangle(12, -10, 12, 10, 0, 0);
+  } else if (type.equals("next_fill")) {
+    fill(255);
+    noStroke();
+    triangle(-12, -10, -12, 10, 0, 0);
+    triangle(0, -10, 0, 10, 12, 0);
+  } else if (type.equals("play_fill")) {
+    fill(255);
+    noStroke();
+    triangle(-8, -12, -8, 12, 12, 0);
+  } else if (type.equals("pause_fill")) {
+    fill(255);
+    noStroke();
+    rect(-8, -12, 6, 24, 2);
+    rect(2, -12, 6, 24, 2);
+  } else if (type.equals("airplay")) {
+    stroke(255);
+    noFill();
+    arc(0, 5, 20, 20, PI + QUARTER_PI, TWO_PI - QUARTER_PI);
+    arc(0, 8, 12, 12, PI + QUARTER_PI, TWO_PI - QUARTER_PI);
+    arc(0, 11, 4, 4, PI + QUARTER_PI, TWO_PI - QUARTER_PI);
+    fill(255);
+    noStroke();
+    triangle(-6, 12, 6, 12, 0, 4);
+  } else if (type.equals("vol_down")) {
+    fill(150);
+    noStroke();
+    triangle(-2, -4, -2, 4, -6, 0);
+    rect(-6, -2, 4, 4);
+  } else if (type.equals("vol_up")) {
+    fill(150);
+    noStroke();
+    triangle(-2, -6, -2, 6, -8, 0);
+    rect(-8, -3, 4, 6);
+    stroke(150);
+    noFill();
+    arc(2, 0, 8, 8, -QUARTER_PI, QUARTER_PI);
+    arc(2, 0, 14, 14, -QUARTER_PI, QUARTER_PI);
+  } else if (type.equals("heart_small")) {
+    noStroke();
+    fill(0);
+    float r = 3;
+    ellipse(-r, -r, r*2.2, r*2.2);
+    ellipse(r, -r, r*2.2, r*2.2);
+    triangle(-r*2.1, -r*0.5, r*2.1, -r*0.5, 0, r*1.5);
+  }
+  popMatrix();
+}
+
+void drawIPodPlayer() {
+  background(255);
+
+  float s = 0.7; // Scale factor to make it smaller
+
+  // iPod Body
+  float ipodW = 850 * s;
+  float ipodH = 480 * s;
+  float centerX = width/2;
+  float centerY = height/2;
+
+  // Subtle outer shadow
+  noStroke();
+  fill(0, 20);
+  rect(centerX - ipodW/2 + 5, centerY - ipodH/2 + 5, ipodW, ipodH, 50 * s);
+
+  // Main Body (Silver/Metallic)
+  fill(235);
+  stroke(200);
+  strokeWeight(1);
+  rect(centerX - ipodW/2, centerY - ipodH/2, ipodW, ipodH, 45 * s);
+
+  // Screen Area (Left side)
+  float screenW = 450 * s;
+  float screenH = 380 * s;
+  float screenX = centerX - ipodW/2 + (35 * s);
+  float screenY = centerY - screenH/2;
+
+  // Screen Border
+  fill(20);
+  rect(screenX - (8*s), screenY - (8*s), screenW + (16*s), screenH + (16*s), 10 * s);
+
+  // Screen Content (Soft Pinkish Gradient)
+  for (int i = 0; i < screenH; i++) {
+    float inter = map(i, 0, screenH, 0, 1);
+    color c = lerpColor(color(255, 235, 240), color(255, 210, 220), inter);
+    stroke(c);
+    line(screenX, screenY + i, screenX + screenW, screenY + i);
+  }
+
+  // Album Art or Video
+  if (selectedSong == 10 && vidioAboutYou != null) {
+    if (vidioAboutYou.available()) vidioAboutYou.read();
+    fill(255);
+    rect(screenX + (40*s), screenY + (70*s), 200*s, 200*s, 5*s);
+    image(vidioAboutYou, screenX + (50*s), screenY + (80*s), 180*s, 180*s);
+  } else if (selectedSong == 14 && vidioSempurna != null) {
+    if (vidioSempurna.available()) vidioSempurna.read();
+    fill(255);
+    rect(screenX + (40*s), screenY + (70*s), 200*s, 200*s, 5*s);
+    image(vidioSempurna, screenX + (50*s), screenY + (80*s), 180*s, 180*s);
+  } else if (selectedSong == 12 && vidioMonolog != null) {
+    if (vidioMonolog.available()) vidioMonolog.read();
+    fill(255);
+    rect(screenX + (40*s), screenY + (70*s), 200*s, 200*s, 5*s);
+    image(vidioMonolog, screenX + (50*s), screenY + (80*s), 180*s, 180*s);
+  } else if (selectedSong == 13 && vidioMasaIni != null) {
+    if (vidioMasaIni.available()) vidioMasaIni.read();
+    fill(255);
+    rect(screenX + (40*s), screenY + (70*s), 200*s, 200*s, 5*s);
+    image(vidioMasaIni, screenX + (50*s), screenY + (80*s), 180*s, 180*s);
+  } else {
+    PImage art = getSelectedImg();
+    if (art != null) {
+      fill(0, 30);
+      noStroke();
+      rect(screenX + (45*s), screenY + (75*s), 200*s, 200*s, 8*s);
+      fill(255);
+      rect(screenX + (40*s), screenY + (70*s), 200*s, 200*s, 5*s);
+      image(art, screenX + (50*s), screenY + (80*s), 180*s, 180*s);
+    }
+  }
+
+  // Metadata
+  textAlign(LEFT, TOP);
+  fill(0);
+  textFont(titleFont); // Use title font for bolder look
+  textSize(32 * s);
+  if (selectedSong < songsList.length) {
+    text(songsList[selectedSong], screenX + (260*s), screenY + (100*s), (170 * s), (150 * s));
+  }
+  fill(80);
+  textFont(mainFont);
+  textSize(18 * s);
+  if (selectedSong < artistsList.length) text(artistsList[selectedSong], screenX + (260*s), screenY + (220*s));
+
+  // Album Context Info
+  fill(0, 100);
+  textSize(12 * s);
+  String albumLabel = "All Songs";
+  if (playContext == 3 && selectedAlbumIndex < albumNames.length) albumLabel = albumNames[selectedAlbumIndex];
+  else if (playContext == 1) albumLabel = "Liked Playlist";
+  text("Playing from: " + albumLabel, screenX + (260*s), screenY + (250*s));
+
+  // Progress Bar
+  float barX = screenX + (40 * s);
+  float barY = screenY + screenH - (60 * s);
+  float barW = screenW - (80 * s);
+  float progress = 0;
+  String currentT = "0:00";
+  String totalT = "0:00";
+
+  if (currentPlayer != null && currentPlayer.length() > 0) {
+    progress = (float)currentPlayer.position() / currentPlayer.length();
+    int pos = currentPlayer.position() / 1000;
+    int len = currentPlayer.length() / 1000;
+    currentT = nf(pos/60, 1) + ":" + nf(pos%60, 2);
+    totalT = nf(len/60, 1) + ":" + nf(len%60, 2);
+  }
+
+  stroke(0, 60);
+  strokeWeight(4 * s);
+  line(barX, barY, barX + barW, barY);
+  stroke(0);
+  strokeWeight(4 * s);
+  line(barX, barY, barX + barW * smoothProgress, barY);
+  fill(0);
+  noStroke();
+  ellipse(barX + barW * smoothProgress, barY, 12 * s, 12 * s);
+
+  fill(0, 150);
+  textSize(10 * s);
+  textAlign(LEFT);
+  text(currentT, barX, barY + (25 * s));
+  textAlign(RIGHT);
+  text(totalT, barX + barW, barY + (25 * s));
+
+  // Heart icon on screen (Next to progress bar)
+  float heartX = barX + barW;
+  float heartY = barY - (15 * s);
+  drawPlayerIcon(heartX, heartY, "heart_small");
+
+  // Click Wheel (Right side)
+  float wheelX = centerX + (230 * s);
+  float wheelY = centerY;
+  float wheelR = 300 * s;
+
+  noStroke();
+  fill(255);
+  ellipse(wheelX, wheelY, wheelR, wheelR);
+
+  // Hover Feedback for Wheel buttons
+  textAlign(CENTER, CENTER);
+
+  // MUSIC (on top of wheel)
+  float menuY = wheelY - (110 * s);
+  if (dist(mouseX, mouseY, wheelX, menuY) < (40 * s)) fill(230);
+  else fill(200);
+  textSize(22 * s);
+  text("MUSIC", wheelX, menuY);
+
+  // Prev
+  float prevX = wheelX - (110 * s);
+  boolean hoverPrev = dist(mouseX, mouseY, prevX, wheelY) < (40 * s);
+  fill(hoverPrev ? 150 : 200);
+  text("<<", prevX, wheelY);
+  if (hoverPrev) {
+    noFill();
+    stroke(0, 30);
+    ellipse(prevX, wheelY, 60*s, 60*s);
+  }
+
+  // Next
+  float nextX = wheelX + (110 * s);
+  boolean hoverNext = dist(mouseX, mouseY, nextX, wheelY) < (40 * s);
+  fill(hoverNext ? 150 : 200);
+  text(">>", nextX, wheelY);
+  if (hoverNext) {
+    noFill();
+    stroke(0, 30);
+    ellipse(nextX, wheelY, 60*s, 60*s);
+  }
+
+  // Play/Pause
+  float playY = wheelY + (100 * s);
+  boolean hoverPlay = dist(mouseX, mouseY, wheelX, playY + (10 * s)) < (40 * s);
+  fill(hoverPlay ? 150 : 200);
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    rect(wheelX - (6*s), playY, 4*s, 18*s);
+    rect(wheelX + (2*s), playY, 4*s, 18*s);
+  } else {
+    triangle(wheelX - (8*s), playY, wheelX - (8*s), playY + 18*s, wheelX + 8*s, playY + 9*s);
+  }
+  if (hoverPlay) {
+    noFill();
+    stroke(0, 30);
+    ellipse(wheelX, playY + 9*s, 60*s, 60*s);
+  }
+
+  // Center Button
+  if (dist(mouseX, mouseY, wheelX, wheelY) < (50 * s)) fill(235);
+  else fill(245);
+  stroke(220);
+  strokeWeight(1);
+  ellipse(wheelX, wheelY, 100 * s, 100 * s);
+}
+void drawRetroText(String t, float x, float y, float sz) {
+  drawRetroText(t, x, y, sz, color(20));
+}
+
+void drawRetroText(String t, float x, float y, float sz, color c) {
+  textFont(retroFont);
+  textSize(sz);
+  textAlign(LEFT, TOP);
+
+  // Retro Chunky Style
+  fill(c);
+
+  // We can simulate the distorted look by drawing layers or using charAt
+  float xOffset = 0;
+  for (int i = 0; i < t.length(); i++) {
+    char ch = t.charAt(i);
+    pushMatrix();
+    // Subtle random rotation/offset for that groovy look
+    float wave = sin(frameCount * 0.05 + i * 0.5) * 2;
+    translate(x + xOffset, y + wave);
+    rotate(radians(sin(i * 0.8) * 5));
+    text(ch, 0, 0);
+    popMatrix();
+    xOffset += textWidth(ch) * 0.95; // Tighter kerning for chunky look
+  }
+}
+
+void drawBubblyText(String t, float x, float y, float sz) {
+  textFont(bubblyFont);
+  textSize(sz);
+  textAlign(LEFT, TOP);
+
+  // 1. Shadow/Thick Outline (Dark Brown)
+  fill(43, 27, 23);
+  float out = 3.5;
+  for (float a = 0; a < TWO_PI; a += PI/8) {
+    text(t, x + cos(a)*out, y + sin(a)*out);
+  }
+
+  // 2. Main Body (Puffy Pink)
+  fill(255, 170, 190);
+  text(t, x, y);
+
+  // 3. Inner Highlight (White)
+  fill(255, 230);
+  textSize(sz * 0.95);
+  text(t, x - 1, y - 1);
+}
+
+void drawSearchResultsContent() {
+  fill(textColor);
+  textSize(28);
+  text("Hasil Pencarian: " + searchQuery, 280, 70);
+  stroke(subTextColor, 50);
+  line(280, 100, width - 150, 100);
+
+  if (searchResultIndices.isEmpty()) {
+    fill(subTextColor);
+    textSize(16);
+    text("Tidak ada lagu yang ditemukan untuk '" + searchQuery + "'", 280, 200);
+    return;
+  }
+
+  for (int i = 0; i < searchResultIndices.size(); i++) {
+    int sIdx = searchResultIndices.get(i);
+    float y = 180 + i * 55;
+
+    if (sIdx == selectedSong) {
+      fill(accentColor, 50);
+    } else if (mouseY > y - 25 && mouseY < y + 30 && mouseX > 280 && mouseX < width - 150) {
+      fill(255, 100);
+    } else {
+      noFill();
+    }
+    noStroke();
+    rect(280, y-25, width - 430, 50, 10);
+
+    if (sIdx < imgsList.length && imgsList[sIdx] != null) image(imgsList[sIdx], 310, y - 15, 30, 30);
+
+    fill(sIdx == selectedSong ? accentColor : textColor);
+    textSize(15);
+    text(i + 1, 285, y + 5);
+    text(songsList[sIdx], 350, y + 5);
+    fill(subTextColor);
+    textSize(11);
+    text("Artis: " + artistsList[sIdx], 350, y + 22);
+
+    int len = 0;
+    if (players[sIdx] != null) len = players[sIdx].length() / 1000;
+    String dur = nf(len/60, 1) + ":" + nf(len%60, 2);
+    fill(sIdx == selectedSong ? accentColor : textColor);
+    text(dur, width - 250, y + 5);
+  }
+}
+
+void keyTyped() {
+  if (searchFocused) {
+    if (key == BACKSPACE) {
+      if (searchQuery.length() > 0) searchQuery = searchQuery.substring(0, searchQuery.length()-1);
+    } else if (key == ENTER || key == RETURN) {
+      searchFocused = false;
+    } else if (key != CODED) {
+      searchQuery += key;
+    }
+
+    // Update Search Results
+    searchResultIndices.clear();
+    if (searchQuery.length() > 0) {
+      currentPage = 8;
+      String q = searchQuery.toLowerCase();
+      for (int i = 0; i < songsList.length; i++) {
+        if (songsList[i].toLowerCase().contains(q) || artistsList[i].toLowerCase().contains(q)) {
+          searchResultIndices.add(i);
+        }
+      }
+    } else {
+      currentPage = 0;
+    }
+  }
+}
+
+void drawStar(float x, float y, float radius1, float radius2, int npoints) {
+  float angle = TWO_PI / npoints;
+  float halfAngle = angle/2.0;
+  beginShape();
+  for (float a = -HALF_PI; a < TWO_PI - HALF_PI; a += angle) {
+    float sx = x + cos(a) * radius2;
+    float sy = y + sin(a) * radius2;
+    vertex(sx, sy);
+    sx = x + cos(a + halfAngle) * radius1;
+    sy = y + sin(a + halfAngle) * radius1;
+    vertex(sx, sy);
+  }
+  endShape(CLOSE);
+}
+
+// =============================================
+// UPDATE CONTROLS: Handle Seek & Volume
+// =============================================
+void updateControls(float mx, float my) {
+  if (currentPlayer == null) return;
+
+  // --- Volume Slider (Bottom Bar) ---
+  if (currentPage != 6 && currentPage != 7) {
+    float barY = height - 45;
+    float contentX = 280;
+    float contentW = width - 380;
+    float volX = contentX + contentW - 60;
+    float controlY = barY + 30;
+    if (controlY > height - 10) controlY = height - 15;
+
+    if (mx >= volX && mx <= volX + 60 && my >= controlY - 10 && my <= controlY + 10) {
+      isDraggingVol = true;
+      volumeValue = constrain((mx - volX) / 60.0, 0, 1);
+      // Minim volume is usually -80 to 6 or similar, but setGain/setVolume varies
+      float gain = map(volumeValue, 0, 1, -40, 10);
+      currentPlayer.setGain(gain);
+    }
+  }
+
+  // --- Seek Logic (Scrubbing) ---
+  if (currentPlayer.length() == 0) return;
+
+  // iPod Player Seek
+  if (currentPage == 7) {
+    float s = 0.7;
+    float centerX = width/2;
+    float centerY = height/2;
+    float screenW = 450 * s;
+    float screenH = 380 * s;
+    float screenX = centerX - (850*s)/2 + (35*s);
+    float screenY = centerY - screenH/2;
+    float barX = screenX + (40*s);
+    float barY = screenY + screenH - (60*s);
+    float barW = screenW - (80*s);
+    if (mx >= barX && mx <= barX + barW && my >= barY - 20 && my <= barY + 20) {
+      isDraggingSeek = true;
+      currentPlayer.cue((int)map(mx, barX, barX + barW, 0, currentPlayer.length()));
+    }
+  }
+  // Full Screen Player Seek
+  else if (currentPage == 5) {
+    float ww = 800;
+    float wh = 450;
+    float wx = 250 + (width - 250 - ww)/2;
+    float wy = (height - wh)/2;
+    float barY = wy + 30 + 140;
+    float barX = wx + 450 + 40;
+    if (mx >= barX && mx <= barX + 230 && my >= barY - 15 && my <= barY + 15) {
+      isDraggingSeek = true;
+      currentPlayer.cue((int)map(mx, barX, barX + 230, 0, currentPlayer.length()));
+    }
+  }
+  // Preview Panel Seek
+  else if (currentPage == 0 || currentPage == 1 || currentPage == 4) {
+    float pvX = 740;
+    float pvY = 100 + uiOffset * 1.5;
+    float ctrlY = pvY + 500;
+    if (mx >= pvX && mx <= pvX + 400 && my >= ctrlY - 15 && my <= ctrlY + 15) {
+      isDraggingSeek = true;
+      currentPlayer.cue((int)map(mx, pvX, pvX + 400, 0, currentPlayer.length()));
+    }
+  }
+  // Bottom Bar Seek
+  if (currentPage != 6 && currentPage != 7) {
+    float barY = height - 45;
+    float contentX = 280;
+    float contentW = width - 380;
+    if (mx >= contentX && mx <= contentX + contentW && my >= barY - 15 && my <= barY + 15) {
+      isDraggingSeek = true;
+      currentPlayer.cue((int)map(mx, contentX, contentX + contentW, 0, currentPlayer.length()));
+    }
+  }
+}
+
+void mouseDragged() {
+  if (isDraggingSeek || isDraggingVol) {
+    updateControls(mouseX, mouseY);
+  }
+}
+
+void mouseReleased() {
+  isDraggingSeek = false;
+  isDraggingVol = false;
+}
+
+void drawSplashScreen() {
+  splashTimer++;
+
+  // 1. New Premium Background
+  if (splashImgNew != null) {
+    image(splashImgNew, 0, 0, width, height);
+  } else {
+    background(20, 10, 30); // Fallback dark purple
+  }
+
+  // 2. Animated Butterflies and Particles
+  for (int i = 0; i < 8; i++) {
+    // Wander path for butterflies
+    float bx = (noise(i * 100, frameCount * 0.003) * width * 1.2) - width * 0.1;
+    float by = (noise(i * 100 + 50, frameCount * 0.003) * height * 1.2) - height * 0.1;
+    float bSz = 15 + noise(i * 20) * 15;
+    float bFlap = 0.1 + noise(i) * 0.2;
+    drawButterfly(bx, by, bSz, bFlap);
+  }
+
+  // Subtle Glow Dust
+  for (int i = 0; i < 15; i++) {
+    float x = (noise(i, frameCount * 0.005) * width);
+    float y = (noise(i + 10, frameCount * 0.005) * height);
+    float sz = noise(i + 20, frameCount * 0.01) * 3;
+    fill(255, 120 + sin(frameCount * 0.05 + i) * 80);
+    noStroke();
+    ellipse(x, y, sz, sz);
+  }
+
+  // 3. "by.nicaa" Top Label (Groovy/Retro style like template)
+  pushMatrix();
+  float labelSz = 24;
+  textFont(retroFont);
+  textSize(labelSz);
+  float labelW = textWidth("by.nicaa");
+  translate(width/2 - labelW/2, 170); // Center the label
+  drawRetroText("by.nicaa", 0, 0, labelSz, accentColor);
+  popMatrix();
+
+  // 4. "MUSICA" Title with Glow at the Bottom
+  pushMatrix();
+  float titleY = height - 180;
+  translate(width/2, titleY);
+
+  // Transition Out
+  float exitAlpha = 255;
+  if (splashTimer > 280) {
+    exitAlpha = map(splashTimer, 280, 300, 255, 0);
+  }
+
+  // High-speed Sequential Letter Animation
+  String fullText = "MUSICA";
+  textFont(eleganceFont);
+  textSize(120);
+
+  // Calculate total width to center the text
+  float totalWidth = textWidth(fullText);
+  float startX = -totalWidth / 2;
+  float currentX = startX;
+
+  for (int i = 0; i < fullText.length(); i++) {
+    char c = fullText.charAt(i);
+    float charW = textWidth(c);
+
+    // Animation timing for each letter (fast sequential reveal)
+    float charDelay = i * 4; // Delay per letter
+    float charDuration = 12.0; // Duration of individual letter animation
+    float tChar = constrain((splashTimer - charDelay) / charDuration, 0, 1);
+    float easeChar = 1 - pow(1 - tChar, 4); // Quartic Ease Out
+
+    if (tChar > 0) {
+      pushMatrix();
+      // Move to character position
+      float waveOffset = sin(frameCount * 0.1 + i * 0.5) * 10;
+      translate(currentX + charW/2, waveOffset);
+
+      // Individual letter animation (scale and fade)
+      scale(lerp(0.5, 1.0, easeChar));
+      float charAlpha = lerp(0, 255, easeChar) * (exitAlpha / 255.0);
+
+      // --- BUBBLY RETRO EFFECT (Funky Style) ---
+      textAlign(CENTER, CENTER);
+
+      // 1. Thick Outer Outline (Retro Shadow)
+      fill(40, 20, 60, charAlpha); // Dark purple shadow
+      float outlineSize = 6.0;
+      for (float a = 0; a < TWO_PI; a += PI/4) {
+        text(c, cos(a) * outlineSize, sin(a) * outlineSize);
+      }
+
+      // 2. Main Puffy Body
+      fill(255, 150, 200, charAlpha); // Puffy Pink
+      text(c, 0, 0);
+
+      // 3. Inner Gloss/Highlight
+      fill(255, 255, 255, charAlpha * 0.8);
+      textSize(110);
+      text(c, -3, -5);
+      textSize(120);
+
+      popMatrix();
+    }
+    currentX += charW;
+  }
+  popMatrix();
+
+  // 5. Secondary Details (Decorative)
+
+
+
+  textSize(16);
+  text("01.", width - 120, height - 100);
+
+  // Bottom Center Instruction
+  textFont(mainFont);
+  fill(255, 180 * (exitAlpha / 255.0));
+  text("Double click to enter the music world", width/2, height - 40);
+
+  // Auto transition
+  if (splashTimer > 300) {
+    currentPage = 0;
+  }
+}
+
+
+void drawProfileScreen() {
+  // Video Background for Profile
+  if (selectedSong == 10 && vidioAboutYou != null) {
+    if (vidioAboutYou.available()) vidioAboutYou.read();
+    imageMode(CORNER);
+    image(vidioAboutYou, 0, 0, width, height);
+  } else if (selectedSong == 14 && vidioSempurna != null) {
+    if (vidioSempurna.available()) vidioSempurna.read();
+    imageMode(CORNER);
+    image(vidioSempurna, 0, 0, width, height);
+  } else if (selectedSong == 12 && vidioMonolog != null) {
+    if (vidioMonolog.available()) vidioMonolog.read();
+    imageMode(CORNER);
+    image(vidioMonolog, 0, 0, width, height);
+  } else if (selectedSong == 13 && vidioMasaIni != null) {
+    if (vidioMasaIni.available()) vidioMasaIni.read();
+    imageMode(CORNER);
+    image(vidioMasaIni, 0, 0, width, height);
+  } else if (profileTemplateImg != null) {
+    imageMode(CORNER);
+    image(profileTemplateImg, 0, 0, width, height);
+  } else {
+    background(0);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    text("Template Profil Tidak Ditemukan", width/2, height/2);
+    textAlign(LEFT, TOP);
+  }
+
+  // Tombol kembali virtual di pojok kiri atas
+  fill(255, 150);
+  noStroke();
+  rect(30, 30, 110, 40, 20);
+  fill(textColor);
+  textSize(16);
+  text("< Kembali", 45, 42);
+}
+
+void drawLyricsScreen() {
+  pushStyle();
+  background(0); // Pure black background before video
+
+  // Background: Video or Blurred Art
+  if (selectedSong == 10 && vidioAboutYou != null) {
+    if (vidioAboutYou.available()) vidioAboutYou.read();
+    imageMode(CORNER);
+    image(vidioAboutYou, 0, 0, width, height);
+  } else if (selectedSong == 14 && vidioSempurna != null) {
+    if (vidioSempurna.available()) vidioSempurna.read();
+    imageMode(CORNER);
+    image(vidioSempurna, 0, 0, width, height);
+  } else if (selectedSong == 12 && vidioMonolog != null) {
+    if (vidioMonolog.available()) vidioMonolog.read();
+    imageMode(CORNER);
+    image(vidioMonolog, 0, 0, width, height);
+  } else if (selectedSong == 13 && vidioMasaIni != null) {
+    if (vidioMasaIni.available()) vidioMasaIni.read();
+    imageMode(CORNER);
+    image(vidioMasaIni, 0, 0, width, height);
+  } else if (selectedSong >= 0 && selectedSong < imgsList.length && imgsList[selectedSong] != null) {
+    imageMode(CORNER);
+    tint(255, 80);
+    image(imgsList[selectedSong], 0, 0, width, height);
+    noTint();
+  }
+
+  // Dark overlay with gradient feel
+  if (selectedSong != 10 && selectedSong != 14 && selectedSong != 12 && selectedSong != 13) {
+    for (int i=0; i<height; i+=2) {
+      float alpha = map(i, 0, height, 180, 240);
+      stroke(10, alpha);
+      line(0, i, width, i);
+    }
+  } else {
+    // Add a very subtle dark tint so lyrics are readable without scanlines
+    fill(0, 80);
+    noStroke();
+    rect(0, 0, width, height);
+  }
+
+  float leftW = width * 0.45;
+  float artSize = (leftW - 100) * 0.7; // Diperkecil
+  float artX = (leftW - artSize) / 2; // Diletakkan di tengah
+  float artY = 120;
+
+  // --- LEFT SIDE: Player ---
+  // Album Art
+  if (selectedSong >= 0 && selectedSong < imgsList.length && imgsList[selectedSong] != null) {
+    image(imgsList[selectedSong], artX, artY, artSize, artSize);
+    noFill();
+    stroke(255, 30);
+    rect(artX, artY, artSize, artSize, 15);
+  }
+
+  // Song Info
+  fill(255);
+  textFont(titleFont);
+  textSize(24);
+  textAlign(CENTER, TOP);
+  text(songsList[selectedSong], artX + artSize/2, artY + artSize + 25);
+
+  fill(255, 180);
+  textFont(mainFont);
+  textSize(15);
+  text(artistsList[selectedSong], artX + artSize/2, artY + artSize + 55);
+  textAlign(LEFT, TOP);
+
+  // Progress Bar
+  float ctrlY = artY + artSize + 130;
+  float barW = artSize;
+  stroke(255, 50);
+  strokeWeight(4);
+  line(artX, ctrlY - 55, artX + barW, ctrlY - 55);
+
+  float progress = 0;
+  if (currentPlayer != null && currentPlayer.length() > 0) progress = (float)currentPlayer.position() / currentPlayer.length();
+  stroke(255);
+  line(artX, ctrlY - 55, artX + barW * progress, ctrlY - 55);
+
+  // Time
+  fill(255, 150);
+  textSize(12);
+  int pos = (currentPlayer != null) ? currentPlayer.position() / 1000 : 0;
+  int len = (currentPlayer != null) ? currentPlayer.length() / 1000 : 0;
+  text(nf(pos/60, 1) + ":" + nf(pos%60, 2), artX, ctrlY - 40);
+  textAlign(RIGHT);
+  text("-" + nf((len-pos)/60, 1) + ":" + nf((len-pos)%60, 2), artX + barW, ctrlY - 40);
+
+  // Controls
+  textAlign(CENTER, CENTER);
+  float cx = artX + artSize/2;
+
+  // Shuffle
+  drawIconModern(cx - 140, ctrlY, "shuffle", isShuffle);
+  // Prev
+  drawIconModern(cx - 80, ctrlY, "prev", false);
+  // Play/Pause Circle
+  fill(255);
+  noStroke();
+  ellipse(cx, ctrlY, 70, 70);
+  fill(0);
+  if (currentPlayer != null && currentPlayer.isPlaying()) {
+    rect(cx - 6, ctrlY - 10, 4, 20);
+    rect(cx + 2, ctrlY - 10, 4, 20);
+  } else {
+    triangle(cx - 5, ctrlY - 12, cx - 5, ctrlY + 12, cx + 12, ctrlY);
+  }
+  // Next
+  drawIconModern(cx + 80, ctrlY, "next", false);
+  // Repeat
+  drawIconModern(cx + 140, ctrlY, "repeat", isRepeat);
+
+  // Volume Slider
+  float volY = ctrlY + 70;
+  drawIconModern(artX + 30, volY, "vol_low", false);
+  stroke(255, 50);
+  line(artX + 50, volY, artX + artSize - 50, volY);
+  stroke(255, 180);
+  line(artX + 50, volY, artX + 50 + (artSize - 100) * volumeValue, volY);
+  fill(255);
+  noStroke();
+  ellipse(artX + 50 + (artSize - 100) * volumeValue, volY, 12, 12);
+  drawIconModern(artX + artSize - 30, volY, "vol_high", false);
+
+  // --- RIGHT SIDE: Lyrics ---
+  float rightX = leftW + 50;
+  float rightW = width - rightX - 50;
+
+  // Extract only the text parts from allLyrics (index 1, 3, 5...)
+  String[] rawLyrics = (selectedSong >= 0 && selectedSong < allLyrics.length) ? allLyrics[selectedSong] : null;
+  ArrayList<String> linesList = new ArrayList<String>();
+  if (rawLyrics != null && rawLyrics.length > 1) {
+    for (int i = 1; i < rawLyrics.length; i += 2) {
+      linesList.add(rawLyrics[i]);
+    }
+  } else {
+    linesList.add("Lirik tidak tersedia.");
+  }
+
+  // Sync logic: Find active index based on timestamps
+  int currentPos = (currentPlayer != null) ? currentPlayer.position() : 0;
+  int activeIndex = 0;
+  if (rawLyrics != null && rawLyrics.length > 1) {
+    for (int i = 0; i < rawLyrics.length; i += 2) {
+      if (currentPos >= Integer.parseInt(rawLyrics[i])) activeIndex = i;
+    }
+  }
+
+  // Smooth scroll logic
+  targetLyricsScroll = - (activeIndex/2) * 60;
+  lyricsScroll = lerp(lyricsScroll, targetLyricsScroll, 0.1);
+
+  float lyricY = height/2;
+  textAlign(LEFT, CENTER);
+
+  for (int i = 0; i < linesList.size(); i++) {
+    String lineText = linesList.get(i);
+    float y = lyricY + (i * 60) + lyricsScroll;
+
+    // Check visibility and calculate opacity based on distance from center
+    float distToCenter = abs(y - height/2);
+    float alpha = map(distToCenter, 0, 200, 255, 0);
+    alpha = constrain(alpha, 0, 255);
+
+    if (i == activeIndex/2) {
+      fill(255, alpha);
+      textSize(36);
+      textFont(titleFont);
+    } else {
+      fill(255, alpha * 0.4);
+      textSize(26);
+      textFont(mainFont);
+    }
+
+    if (y > 50 && y < height - 50) {
+      text(lineText, rightX, y, rightW, 100);
+    }
+  }
+
+  // Back button (Top Left)
+  textAlign(LEFT, CENTER);
+  fill(255, 150);
+  rect(30, 30, 100, 40, 20);
+  fill(255);
+  textSize(14);
+  text("< Kembali", 45, 50);
+
+  popStyle();
+}
+
+void drawIconModern(float x, float y, String type, boolean active) {
+  pushStyle();
+  stroke(active ? accentColor : color(255, 180));
+  strokeWeight(2);
+  noFill();
+  pushMatrix();
+  translate(x, y);
+
+  if (type.equals("shuffle")) {
+    line(-10, -5, 10, 5);
+    line(-10, 5, 10, -5);
+  } else if (type.equals("repeat")) {
+    ellipse(0, 0, 15, 12);
+    triangle(5, -6, 10, -6, 7.5, -3);
+  } else if (type.equals("prev")) {
+    triangle(5, -8, 5, 8, -5, 0);
+    line(-7, -8, -7, 8);
+  } else if (type.equals("next")) {
+    triangle(-5, -8, -5, 8, 5, 0);
+    line(7, -8, 7, 8);
+  } else if (type.equals("vol_low")) {
+    textSize(10);
+    fill(255, 150);
+    textAlign(CENTER, CENTER);
+    text("Vol-", 0, 0);
+  } else if (type.equals("vol_high")) {
+    textSize(10);
+    fill(255, 150);
+    textAlign(CENTER, CENTER);
+    text("Vol+", 0, 0);
+  }
+
+  popMatrix();
+  popStyle();
+}
+
+// --- NEW: Ethereal Purple Butterfly Animation Function ---
+void drawButterfly(float x, float y, float sz, float flapSpeed) {
+  pushMatrix();
+  translate(x, y);
+
+  // Animation logic
+  float flap = sin(frameCount * flapSpeed);
+  float wingScale = map(abs(flap), 0, 1, 0.1, 1.0);
+
+  // Gentle body tilt/wobble
+  rotate(sin(frameCount * 0.03) * 0.4);
+
+  // Aesthetic Colors from the reference
+  color purpleGlow = color(160, 60, 255, 35);
+  color purpleMain = color(200, 100, 255, 160);
+  color lightPurple = color(230, 180, 255, 210);
+  color highlight = color(255, 255, 255, 230);
+
+  for (int s : new int[]{-1, 1}) {
+    pushMatrix();
+    scale(s * wingScale, 1.0);
+
+    // 1. Soft Glow Layer
+    noStroke();
+    fill(purpleGlow);
+    ellipse(sz * 0.6, -sz * 0.1, sz * 1.8, sz * 1.8);
+
+    // 2. Main Wing Rendering (Detailed Shapes)
+    stroke(lightPurple);
+    strokeWeight(1.5);
+    fill(purpleMain);
+
+    // Upper Wing (Pointed Elegant)
+    beginShape();
+    vertex(2, 0);
+    bezierVertex(sz * 0.6, -sz * 1.3, sz * 1.6, -sz * 0.9, sz * 1.3, 0);
+    bezierVertex(sz * 1.1, sz * 0.5, sz * 0.6, sz * 0.3, 2, 0);
+    endShape(CLOSE);
+
+    // Lower Wing (Swallowtail Style)
+    beginShape();
+    vertex(2, 2);
+    bezierVertex(sz * 0.9, sz * 0.3, sz * 1.3, sz * 1.1, sz * 0.5, sz * 1.5);
+    bezierVertex(sz * 0.2, sz * 1.1, sz * 0.1, sz * 0.6, 2, 2);
+    endShape(CLOSE);
+
+    // 3. Sparkling Dots (Static relative to wing)
+    noStroke();
+    fill(highlight);
+    for (int i = 0; i < 10; i++) {
+      // Use pseudo-random positioning based on index
+      float dx = (noise(i * 15) * sz * 0.9) + 5;
+      float dy = (noise(i * 25) * sz * 1.6) - sz * 0.7;
+      // Filter dots to stay within wing area roughly
+      if (dx > 0 && dx < sz * 1.2) {
+        float dsz = noise(i * 35, frameCount * 0.04) * 3.5;
+        ellipse(dx, dy, dsz, dsz);
+      }
+    }
+    popMatrix();
+  }
+
+  // 4. Glowing Body
+  noStroke();
+  fill(highlight, 200);
+  ellipse(0, 0, 4, sz * 0.9);
+
+  // 5. Curly Antennae
+  noFill();
+  stroke(lightPurple);
+  strokeWeight(1.2);
+  // Elegant curls
+  bezier(0, -sz * 0.4, -6, -sz * 0.9, -22, -sz * 0.6, -18, -sz * 1.0);
+  bezier(0, -sz * 0.4, 6, -sz * 0.9, 22, -sz * 0.6, 18, -sz * 1.0);
+
+  popMatrix();
+}
+
+// --- NEW: Purple Chrome Sparkle Effect for Text Tips ---
+void drawPurpleSparkle(float x, float y, float alpha) {
+  pushMatrix();
+  translate(x, y);
+
+  // Rotate slowly
+  rotate(frameCount * 0.12);
+
+  stroke(255, alpha);
+  strokeWeight(2);
+  // Sharp cross
+  line(-15, 0, 15, 0);
+  line(0, -15, 0, 15);
+
+  // Diagonal sharp points
+  strokeWeight(1);
+  line(-8, -8, 8, 8);
+  line(8, -8, -8, 8);
+
+  // Center glow
+  noStroke();
+  fill(255, alpha);
+  ellipse(0, 0, 4, 4);
+  fill(150, 50, 255, alpha * 0.6);
+  ellipse(0, 0, 15, 15);
+
+  popMatrix();
+}
+
+void drawKaraukeContent() {
+  // Title moved down to avoid overlap with header search bar
+  drawRetroText("fav memories", 280, 100, 64);
+
+  // Microphone/Lightstick Icon (Top Right) - Styled like template
+  float micX = width - 100;
+  float micY = 100;
+  fill(accentColor);
+  ellipse(micX, micY, 60, 60);
+  fill(255);
+  rect(micX - 10, micY - 20, 20, 40, 10); // Lightstick head
+  fill(textColor, 150);
+  rect(micX - 4, micY + 15, 8, 15); // handle
+
+  float lx = 300;
+  float ly = 180;
+  float lw = width - 350;
+  float lh = height - 300;
+
+  // --- VIDEO BACKGROUND (if toggled) ---
+  if (showVideoMomen) {
+    pushStyle();
+    float tx = lx - 20;
+    float ty = ly + 40;
+    float tw = lw + 40;
+    float th = lh - 10;
+
+    color bgPink = color(251, 228, 228);
+    color tabPink = color(214, 162, 162);
+    color darkOutline = color(50, 20, 20);
+    color fillDarkPink = color(232, 197, 197);
+
+    // 1. BACK WINDOW
+    float bx = tx + tw - 50;
+    float by = ty - 60;
+    float bw = 150; // narrower so it doesn't go off screen
+    float bh = th + 40;
+
+    stroke(darkOutline);
+    strokeWeight(3);
+    fill(bgPink);
+    rect(bx, by, bw, bh, 5);
+
+    // Back window header
+    fill(bgPink);
+    rect(bx, by, bw, 35, 5, 5, 0, 0);
+    line(bx, by + 35, bx + bw, by + 35);
+
+    // Back window Mac buttons (circles)
+    fill(bgPink);
+    ellipse(bx + bw - 20, by + 17, 10, 10);
+    ellipse(bx + bw - 40, by + 17, 10, 10);
+    ellipse(bx + bw - 60, by + 17, 10, 10);
+
+    // Back window side bars
+    for (int i=0; i<6; i++) {
+      fill(tabPink);
+      rect(bx + bw - 35, by + 60 + i*40, 25, 15, 10);
+    }
+
+    // 2. FRONT WINDOW
+    float tabW = 250;
+    float tabH = 35;
+
+    // Main Window Body
+    stroke(darkOutline);
+    strokeWeight(3);
+    fill(bgPink);
+    rect(tx, ty, tw, th, 5);
+
+    // Address bar area (Header)
+    float headerY = ty;
+    float headerH = 50;
+
+    fill(bgPink);
+    rect(tx, headerY, tw, headerH, 5, 5, 0, 0);
+    line(tx, headerY + headerH, tx + tw, headerY + headerH);
+
+    // Inner pink bar
+    fill(tabPink);
+    rect(tx + 2, headerY + 2, tw - 4, headerH - 12, 5, 5, 0, 0);
+
+    // Left/Right arrows
+    fill(darkOutline);
+    noStroke();
+    triangle(tx + 20, headerY + 20, tx + 30, headerY + 12, tx + 30, headerY + 28);
+    triangle(tx + 45, headerY + 20, tx + 35, headerY + 12, tx + 35, headerY + 28);
+    stroke(darkOutline);
+    strokeWeight(2);
+    line(tx + 20, headerY + 20, tx + 30, headerY + 20);
+    line(tx + 45, headerY + 20, tx + 35, headerY + 20);
+
+    // Address pill
+    fill(fillDarkPink);
+    stroke(darkOutline);
+    strokeWeight(2);
+    rect(tx + 65, headerY + 5, tw - 130, 28, 14);
+
+    // Heart Icon
+    fill(150, 70, 70);
+    noStroke();
+    pushMatrix();
+    translate(tx + tw - 35, headerY + 12);
+    scale(0.8);
+    beginShape();
+    vertex(0, 15);
+    bezierVertex(0, 0, -20, 0, -20, 10);
+    bezierVertex(-20, 25, 0, 30, 0, 30);
+    bezierVertex(0, 30, 20, 25, 20, 10);
+    bezierVertex(20, 0, 0, 0, 0, 15);
+    endShape();
+    popMatrix();
+
+    // 3. FRONT WINDOW TAB (Drawn over the top outline)
+    fill(bgPink);
+    stroke(darkOutline);
+    strokeWeight(3);
+    beginShape();
+    vertex(tx, ty + 2); // To cover outline
+    vertex(tx, ty - tabH);
+    quadraticVertex(tx, ty - tabH - 5, tx + 5, ty - tabH - 5);
+    vertex(tx + tabW - 20, ty - tabH - 5);
+    quadraticVertex(tx + tabW, ty - tabH - 5, tx + tabW + 5, ty + 2);
+    endShape(CLOSE);
+    // hide bottom line of tab
+    noStroke();
+    fill(tabPink);
+    rect(tx + 2, ty - 2, tabW + 2, 6);
+    fill(bgPink);
+    rect(tx + 2, ty - tabH + 2, tabW - 10, tabH - 2);
+
+    // Strawberry icon
+    pushMatrix();
+    translate(tx + 30, ty - tabH + 15);
+    noStroke();
+    fill(200, 80, 80);
+    bezier(-8, -6, -15, 10, 15, 10, 8, -6);
+    fill(80, 150, 80);
+    triangle(-5, -6, 5, -6, 0, -12);
+    popMatrix();
+
+    // 'x' on tab
+    stroke(darkOutline);
+    strokeWeight(2);
+    line(tx + tabW - 20, ty - tabH + 12, tx + tabW - 10, ty - tabH + 22);
+    line(tx + tabW - 10, ty - tabH + 12, tx + tabW - 20, ty - tabH + 22);
+
+    // 4. RIGHT SCROLLBAR AREA
+    float sbW = 30;
+    float sbX = tx + tw - sbW;
+    stroke(darkOutline);
+    strokeWeight(3);
+    line(sbX, headerY + headerH, sbX, ty + th);
+
+    // Scroll handle
+    fill(tabPink);
+    rect(sbX + 5, headerY + headerH + 30, 20, 100, 10);
+
+    // Video Content Area
+    float cx = tx + 15;
+    float cy = headerY + headerH + 15;
+    float cw = tw - sbW - 30;
+    float ch = th - headerH - 30;
+
+    if (vidioMomen != null) {
+      if (vidioMomen.width > 0) {
+        if (vidioMomen.available()) vidioMomen.read();
+
+        // Draw Video
+        image(vidioMomen, cx, cy, cw, ch);
+
+        // Outline for video
+        noFill();
+        stroke(darkOutline);
+        strokeWeight(2);
+        rect(cx, cy, cw, ch);
+
+        // --- OVERLAY PLAYBACK CONTROLS ---
+        if (showMomenControls) {
+          pushStyle();
+          float ctrlW = 350;
+          float ctrlH = 80;
+          float ctrlX = cx + cw/2 - ctrlW/2;
+          float ctrlY = cy + ch - ctrlH - 20;
+
+          // Playback Control Container
+          stroke(170, 190, 230); // Light blue border
+          strokeWeight(4);
+          fill(255); // White background
+          rect(ctrlX, ctrlY, ctrlW, ctrlH, 15);
+
+          // Progress Bar (Pink)
+          noStroke();
+          fill(243, 164, 199); // Pink #F3A4C7
+          rect(ctrlX + 30, ctrlY + 20, ctrlW - 60, 6, 3);
+
+          // Control Buttons
+          float btnY = ctrlY + 50;
+
+          // Rewind Icon
+          fill(243, 164, 199);
+          triangle(ctrlX + 110, btnY - 8, ctrlX + 110, btnY + 8, ctrlX + 95, btnY);
+          triangle(ctrlX + 125, btnY - 8, ctrlX + 125, btnY + 8, ctrlX + 110, btnY);
+          rect(ctrlX + 90, btnY - 8, 3, 16);
+
+          // Play / Pause Icon
+          fill(166, 188, 225); // Light Blue #A6BCE1
+          if (isPlayingMomen) {
+            rect(ctrlX + ctrlW/2 - 8, btnY - 12, 6, 24);
+            rect(ctrlX + ctrlW/2 + 2, btnY - 12, 6, 24);
+          } else {
+            triangle(ctrlX + ctrlW/2 - 6, btnY - 14, ctrlX + ctrlW/2 - 6, btnY + 14, ctrlX + ctrlW/2 + 14, btnY);
+          }
+
+          // Fast Forward Icon
+          fill(243, 164, 199);
+          triangle(ctrlX + ctrlW - 110, btnY - 8, ctrlX + ctrlW - 110, btnY + 8, ctrlX + ctrlW - 95, btnY);
+          triangle(ctrlX + ctrlW - 125, btnY - 8, ctrlX + ctrlW - 125, btnY + 8, ctrlX + ctrlW - 110, btnY);
+          rect(ctrlX + ctrlW - 93, btnY - 8, 3, 16);
+
+          // Left Decorative Flower
+          pushMatrix();
+          translate(ctrlX - 5, ctrlY + 25);
+          fill(243, 164, 199); // Pink petals
+          for (int i = 0; i < 5; i++) {
+            ellipse(0, -6, 8, 8);
+            rotate(TWO_PI / 5);
+          }
+          fill(255, 217, 102); // Yellow center
+          ellipse(0, 0, 8, 8);
+          popMatrix();
+
+          // Left Decorative Heart
+          pushMatrix();
+          translate(ctrlX - 25, ctrlY + 60);
+          fill(253, 221, 228); // Light pink heart
+          beginShape();
+          vertex(0, 4);
+          bezierVertex(0, -4, -12, -4, -12, 0);
+          bezierVertex(-12, 6, 0, 12, 0, 12);
+          bezierVertex(0, 12, 12, 6, 12, 0);
+          bezierVertex(12, -4, 0, -4, 0, 4);
+          endShape();
+          popMatrix();
+
+          // Left Top Decorative Star
+          pushMatrix();
+          translate(ctrlX - 20, ctrlY - 5);
+          stroke(255, 217, 102);
+          strokeWeight(2);
+          noFill();
+          line(-6, 0, 6, 0);
+          line(0, -6, 0, 6);
+          line(-4, -4, 4, 4);
+          line(4, -4, -4, 4);
+          popMatrix();
+
+          // Right Decorative Flower
+          pushMatrix();
+          translate(ctrlX + ctrlW + 10, ctrlY + 65);
+          noStroke();
+          fill(243, 164, 199); // Pink petals
+          for (int i = 0; i < 5; i++) {
+            ellipse(0, -8, 10, 10);
+            rotate(TWO_PI / 5);
+          }
+          fill(255, 217, 102); // Yellow center
+          ellipse(0, 0, 10, 10);
+          popMatrix();
+
+          // Right Decorative Heart
+          pushMatrix();
+          translate(ctrlX + ctrlW + 25, ctrlY + 20);
+          fill(253, 221, 228); // Light pink heart
+          beginShape();
+          vertex(0, 4);
+          bezierVertex(0, -4, -10, -4, -10, 0);
+          bezierVertex(-10, 5, 0, 10, 0, 10);
+          bezierVertex(0, 10, 10, 5, 10, 0);
+          bezierVertex(10, -4, 0, -4, 0, 4);
+          endShape();
+          popMatrix();
+
+          // Right Bottom Decorative Star
+          pushMatrix();
+          translate(ctrlX + ctrlW + 25, ctrlY + 85);
+          stroke(255, 217, 102);
+          strokeWeight(2);
+          noFill();
+          line(-5, 0, 5, 0);
+          line(0, -5, 0, 5);
+          line(-3, -3, 3, 3);
+          line(3, -3, -3, 3);
+          popMatrix();
+
+          popStyle();
+        }
+      } else {
+        fill(0, 30);
+        rect(cx, cy, cw, ch, 5);
+        fill(darkOutline);
+        textAlign(CENTER, CENTER);
+        text("Loading Video...", cx + cw/2, cy + ch/2);
+        textAlign(LEFT, TOP);
+      }
+    }
+
+    popStyle();
+  } else {
+    // --- DEFAULT VIEW (Video Off) ---
+    // Glass Body
+    noStroke();
+    fill(255, 120);
+    rect(lx, ly, lw, lh, 40);
+
+    if (bingkaiImg != null) {
+      image(bingkaiImg, lx, ly, lw, lh);
+    }
+
+    // Decorative Floating Music Notes (Simplified to match template)
+    for (int i = 0; i < 6; i++) {
+      float nx = lx + 100 + i * (lw/7);
+      float ny = ly + 60 + sin(frameCount * 0.04 + i) * 15;
+      drawMiniMusicNote(nx, ny, i % 2 == 0);
+    }
+
+    textAlign(CENTER, CENTER);
+
+    // --- BARIS 1 (Small, Dark/White if video) ---
+    fill(textColor);
+    textFont(titleFont);
+    textSize(28);
+    text("He was just a shape...", lx + lw/2, ly + lh/2 - 70);
+
+    // --- BARIS 2 (Chunky Pink) ---
+    float tx_text = lx + lw/2;
+    float ty_text = ly + lh/2;
+
+    textFont(retroFont);
+    textSize(58);
+
+    // Chunky Shadow Effect
+    fill(0, 50);
+    text("Of my heart", tx_text + 2, ty_text + 2);
+
+    fill(accentColor);
+    text("Of my heart", tx_text, ty_text);
+
+    fill(subTextColor);
+    textFont(mainFont);
+    textSize(22);
+    text("Here are the memories!", lx + lw/2, ly + lh - 70);
+
+    textAlign(LEFT, TOP);
+  }
+}
+
+// Helper to draw aesthetic musical notes (Simplified Hand-drawn style)
+void drawMiniMusicNote(float x, float y, boolean type) {
+  pushMatrix();
+  translate(x, y);
+  rotate(sin(frameCount * 0.02) * 0.1);
+
+  stroke(accentColor, 120);
+  strokeWeight(2);
+  noFill();
+
+  // Note Head
+  fill(accentColor, 80);
+  ellipse(0, 0, 10, 8);
+
+  // Stem
+  line(4, 0, 4, -20);
+
+  // Flag
+  if (type) {
+    bezier(4, -20, 8, -18, 12, -15, 10, -8);
+  } else {
+    // Double note feel
+    line(4, -20, 12, -18);
+    ellipse(8, 2, 10, 8);
+    line(12, 2, 12, -18);
+  }
+
+  popMatrix();
+}
+
+void movieEvent(Movie m) {
+  m.read();
+}
